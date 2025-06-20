@@ -31,13 +31,13 @@ class LayerInteractionWidgets {
   /// interaction layer.
   /// * [border]: An optional border to be displayed around the interaction
   /// layer.
-  const LayerInteractionWidgets({
-    this.editButton,
-    this.removeButton,
-    this.rotateScaleButton,
-    this.children,
-    this.border,
-  });
+  const LayerInteractionWidgets(
+      {this.editButton,
+      this.removeButton,
+      this.rotateScaleButton,
+      this.children,
+      this.border,
+      this.removebgIcon});
 
   /// The button for the edit interaction, represented by
   /// [LayerInteractionTapButton].
@@ -59,6 +59,9 @@ class LayerInteractionWidgets {
   /// **Note:** May not be directly visible or functional when `children` is
   /// used.
   final LayerInteractionScaleRotateButton? rotateScaleButton;
+
+  /// [LayerInteractionTapButton].
+  final LayerInteractionTapButton? removebgIcon;
 
   /// A list of child widgets to be displayed within the interaction layer.
   ///
@@ -169,6 +172,7 @@ class LayerInteractionWidgets {
     LayerInteractionTapButton? editButton,
     LayerInteractionTapButton? removeButton,
     LayerInteractionScaleRotateButton? rotateScaleButton,
+    LayerInteractionTapButton? removebgIcon,
     List<LayerInteractionItem>? children,
     LayerInteractionBorder? border,
   }) {
@@ -176,6 +180,7 @@ class LayerInteractionWidgets {
       editButton: editButton ?? this.editButton,
       removeButton: removeButton ?? this.removeButton,
       rotateScaleButton: rotateScaleButton ?? this.rotateScaleButton,
+      removebgIcon: removebgIcon ?? this.removebgIcon,
       children: children ?? this.children,
       border: border ?? this.border,
     );

@@ -249,6 +249,10 @@ class _LayerInteractionHelperWidgetState
             stream: rebuildStream,
             builder: (_) => _buildRotateScaleIcon(interactions),
           ),
+      (rebuildStream, layer, interactions) => ReactiveWidget(
+            stream: rebuildStream,
+            builder: (_) => _buildRemoveBgIcon(interactions),
+          ),
     ];
   }
 
@@ -313,6 +317,29 @@ class _LayerInteractionHelperWidgetState
             buttonRadius: layerInteraction.style.buttonRadius,
             cursor: layerInteraction.style.removeCursor,
             icon: layerInteraction.icons.remove,
+            tooltip: i18n.layerInteraction.remove,
+            color: layerInteraction.style.buttonRemoveColor,
+            background: layerInteraction.style.buttonRemoveBackground,
+          ),
+        );
+  }
+
+  Widget _buildRemoveBgIcon(LayerItemInteractions interactions) {
+    return layerInteraction.widgets.removebgIcon?.call(
+          _rebuildStream.stream,
+          () => widget.onRemoveLayer?.call(),
+          -widget.layerData.rotation,
+        ) ??
+        Positioned(
+          bottom: 0,
+          left: 0,
+          child: LayerInteractionButton(
+            // toggleTooltipVisibility: toggleTooltipVisibility,
+            rotation: -widget.layerData.rotation,
+            onTap: interactions.remove,
+            buttonRadius: layerInteraction.style.buttonRadius,
+            cursor: layerInteraction.style.removeCursor,
+            icon: layerInteraction.icons.removeBg,
             tooltip: i18n.layerInteraction.remove,
             color: layerInteraction.style.buttonRemoveColor,
             background: layerInteraction.style.buttonRemoveBackground,
