@@ -1,8 +1,8 @@
-// Flutter imports:
+// Flutter core imports
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+// Project-specific imports
 import '/core/mixins/converted_configs.dart';
 import '/core/mixins/editor_configs_mixin.dart';
 import '/core/models/custom_widgets/utils/custom_widgets_typedef.dart';
@@ -23,7 +23,6 @@ import 'layer_interaction_button.dart';
 /// editing, removing, and transforming layers. It displays interactive UI
 /// elements based on the state of the layer (selected or interactive) and
 /// enables user interactions through gestures and tooltips.
-
 class LayerInteractionHelperWidget extends StatefulWidget
     with SimpleConfigsAccess {
   /// Creates a [LayerInteractionHelperWidget].
@@ -81,6 +80,7 @@ class LayerInteractionHelperWidget extends StatefulWidget
   ///
   /// This child widget displays the content that users will interact with
   /// using the layer manipulation controls.
+
   final Widget child;
 
   /// Callback for handling the edit layer action.
@@ -88,8 +88,7 @@ class LayerInteractionHelperWidget extends StatefulWidget
   /// This callback is triggered when the user selects the edit option for a
   /// layer, allowing for modifications to the layer's content.
   final Function()? onEditLayer;
-
-  /// Callback for handling the remove layer action.
+  // Callback for handling the remove layer action.
   ///
   /// This callback is triggered when the user selects the remove option for a
   /// layer, enabling the removal of the layer from the editor.
@@ -113,6 +112,7 @@ class LayerInteractionHelperWidget extends StatefulWidget
   ///
   /// This data is used to determine the layer's appearance, behavior, and the
   /// interactions available to the user.
+
   final Layer layerData;
 
   /// Indicates whether the layer is interactive.
@@ -136,17 +136,17 @@ class LayerInteractionHelperWidget extends StatefulWidget
   @override
   State<LayerInteractionHelperWidget> createState() =>
       _LayerInteractionHelperWidgetState();
-}
 
-/// The state class for [LayerInteractionHelperWidget].
-///
-/// This class manages the interactive state of the layer, including visibility
-/// of tooltips and the display of interaction buttons for layer manipulation.
+  /// The state class for [LayerInteractionHelperWidget].
+  ///
+  /// This class manages the interactive state of the layer, including visibility
+  /// of tooltips and the display of interaction buttons for layer manipulation.
+}
 
 class _LayerInteractionHelperWidgetState
     extends State<LayerInteractionHelperWidget>
     with ImageEditorConvertedConfigs, SimpleConfigsAccessState {
-  final _rebuildStream = StreamController.broadcast();
+  final _rebuildStream = StreamController<void>.broadcast();
 
   @override
   void dispose() {
@@ -156,7 +156,7 @@ class _LayerInteractionHelperWidgetState
 
   @override
   void setState(void Function() fn) {
-    _rebuildStream.add(null);
+    _rebuildStream.add(null); // Notify reactive widgets before state changes
     super.setState(fn);
   }
 
@@ -164,25 +164,32 @@ class _LayerInteractionHelperWidgetState
   Widget build(BuildContext context) {
     if (widget.forceIgnoreGestures) {
       return IgnorePointer(
-          ignoring: widget.forceIgnoreGestures, child: widget.child);
+        ignoring: true,
+        child: widget.child,
+      );
     }
 
     String layerId = widget.layerData.id;
     var deferManager = DeferManager.maybeOf(context);
 
+    // Return child directly if not interactive
     if (!widget.isInteractive ||
         (!widget.selected && deferManager?.selectedLayerId != '')) {
-      // Return the child widget directly if the layer is not interactive.
       return widget.child;
-    } else if (!widget.selected) {
+    }
+
+    // Wrap with DeferPointer if not selected
+    if (!widget.selected) {
       // Use a defer pointer if the layer is not selected, preventing
       // interaction.
+
       return DeferPointer(
         key: ValueKey('Defer-${deferManager?.id ?? ''}-$layerId'),
         child: widget.child,
       );
     }
 
+    // Determine which interaction items to show
     List<LayerInteractionItem> children =
         layerInteraction.widgets.children ?? _buildDefaultInteractions();
 
@@ -193,6 +200,7 @@ class _LayerInteractionHelperWidgetState
           fit: StackFit.passthrough,
           alignment: Alignment.center,
           children: [
+            // Layer border
             layerInteraction.widgets.border
                     ?.call(widget.child, widget.layerData) ??
                 Container(
@@ -207,6 +215,8 @@ class _LayerInteractionHelperWidgetState
                     child: widget.child,
                   ),
                 ),
+
+            // Render each interaction icon
             ...children.map(
               (item) => item.call(
                 _rebuildStream.stream,
@@ -229,6 +239,7 @@ class _LayerInteractionHelperWidgetState
     );
   }
 
+  /// Builds the default interaction buttons shown around a layer
   List<LayerInteractionItem> _buildDefaultInteractions() {
     bool isLayerEditable = widget.layerData.interaction.enableEdit &&
             widget.layerData.runtimeType == TextLayer ||
@@ -249,9 +260,14 @@ class _LayerInteractionHelperWidgetState
             stream: rebuildStream,
             builder: (_) => _buildRotateScaleIcon(interactions),
           ),
+      (rebuildStream, layer, interactions) => ReactiveWidget(
+            stream: rebuildStream,
+            builder: (_) => _buildRemoveBgIcon(interactions, layer.rotation),
+          ),
     ];
   }
 
+  /// Builds the rotate/scale control button
   Widget _buildRotateScaleIcon(LayerItemInteractions interactions) {
     return layerInteraction.widgets.rotateScaleButton?.call(
           _rebuildStream.stream,
@@ -276,6 +292,7 @@ class _LayerInteractionHelperWidgetState
         );
   }
 
+  /// Builds the edit button
   Widget _buildEditButton(LayerItemInteractions interactions) {
     return layerInteraction.widgets.editButton?.call(
           _rebuildStream.stream,
@@ -298,6 +315,7 @@ class _LayerInteractionHelperWidgetState
         );
   }
 
+  /// Builds the remove (delete) button
   Widget _buildRemoveButton(LayerItemInteractions interactions) {
     return layerInteraction.widgets.removeButton?.call(
           _rebuildStream.stream,
@@ -313,6 +331,30 @@ class _LayerInteractionHelperWidgetState
             buttonRadius: layerInteraction.style.buttonRadius,
             cursor: layerInteraction.style.removeCursor,
             icon: layerInteraction.icons.remove,
+            tooltip: i18n.layerInteraction.remove,
+            color: layerInteraction.style.buttonRemoveColor,
+            background: layerInteraction.style.buttonRemoveBackground,
+          ),
+        );
+  }
+
+  /// Builds the remove background button (if applicable)
+  Widget _buildRemoveBgIcon(
+      LayerItemInteractions interactions, double rotation) {
+    return layerInteraction.widgets.removebgIcon?.call(
+          _rebuildStream.stream,
+          () => widget.onRemoveLayer?.call(),
+          -rotation,
+        ) ??
+        Positioned(
+          bottom: 0,
+          left: 0,
+          child: LayerInteractionButton(
+            rotation: -rotation,
+            onTap: interactions.remove,
+            buttonRadius: layerInteraction.style.buttonRadius,
+            cursor: layerInteraction.style.removeCursor,
+            icon: layerInteraction.icons.removeBg,
             tooltip: i18n.layerInteraction.remove,
             color: layerInteraction.style.buttonRemoveColor,
             background: layerInteraction.style.buttonRemoveBackground,

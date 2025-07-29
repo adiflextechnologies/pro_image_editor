@@ -11,11 +11,12 @@ class LayerInteractionIcons {
   /// The [edit] icon defaults to [Icons.edit].
   /// The [remove] icon defaults to [Icons.clear].
   /// The [rotateScale] icon defaults to [Icons.sync].
-  const LayerInteractionIcons({
-    this.remove = Icons.clear,
-    this.edit = Icons.edit_outlined,
-    this.rotateScale = Icons.sync,
-  });
+  /// The [removeBg] icon defaults to [Icons.auto_fix_high].
+  const LayerInteractionIcons(
+      {this.remove = Icons.clear,
+      this.edit = Icons.edit_outlined,
+      this.rotateScale = Icons.sync,
+      this.removeBg = Icons.auto_fix_high});
 
   /// The icon data for removing a layer.
   final IconData remove;
@@ -26,21 +27,23 @@ class LayerInteractionIcons {
   /// The icon data for rotating or scaling a layer.
   final IconData rotateScale;
 
+  final IconData removeBg;
+
   /// Creates a copy of this `LayerInteractionIcons` object with the given
   /// fields replaced with new values.
   ///
   /// The [copyWith] method allows you to create a new instance of
   /// [LayerInteractionIcons] with some properties updated while keeping the
   /// others unchanged.
-  LayerInteractionIcons copyWith({
-    IconData? remove,
-    IconData? edit,
-    IconData? rotateScale,
-  }) {
+  LayerInteractionIcons copyWith(
+      {IconData? remove,
+      IconData? edit,
+      IconData? rotateScale,
+      IconData? removeBg}) {
     return LayerInteractionIcons(
-      remove: remove ?? this.remove,
-      edit: edit ?? this.edit,
-      rotateScale: rotateScale ?? this.rotateScale,
-    );
+        remove: remove ?? this.remove,
+        edit: edit ?? this.edit,
+        rotateScale: rotateScale ?? this.rotateScale,
+        removeBg: removeBg ?? this.removeBg);
   }
 }
