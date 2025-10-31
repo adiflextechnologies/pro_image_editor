@@ -153,19 +153,16 @@ class TextEditorInput extends StatelessWidget {
         scrollPhysics: const NeverScrollableScrollPhysics(),
         hint: textCtrl.text.isEmpty ? i18n.inputHintText : '',
         hintStyle: selectedTextStyle.copyWith(
-          color: configs.style.inputHintColor,
-          fontSize: textFontSize,
-          height: 1.35,
-          shadows: [],
+        color: configs.style.inputHintColor,
+        fontSize: textFontSize,
+        // do NOT override height/letterSpacing/shadows/decoration here
         ),
         backgroundColor: backgroundColor,
         style: selectedTextStyle.copyWith(
-          color: textColor,
-          fontSize: textFontSize,
-          height: 1.35,
-          letterSpacing: 0,
-          decoration: TextDecoration.none,
-          shadows: [],
+        color: textColor,
+        fontSize: textFontSize,
+        // IMPORTANT: do NOT set height / letterSpacing / decoration / shadows
+        // We want to respect what AdvancedTextEditor sets (line spacing, letter spacing, outline via shadows)
         ),
 
         /// If we edit an layer we focus to the textfield after the
