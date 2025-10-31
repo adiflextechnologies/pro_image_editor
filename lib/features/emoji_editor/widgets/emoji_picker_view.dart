@@ -82,8 +82,6 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
   late double _emojiBoxSize;
   late TextStyle _emojiStyle;
 
-  late final _viewConfigs = widget.config.emojiViewConfig;
-
   @override
   void initState() {
     super.initState();
@@ -127,13 +125,10 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
 
   void _scrollToItem(int index) {
     final GlobalKey key = _itemKeys[index]!;
-    final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-
-    final position = renderBox.localToGlobal(
-      Offset.zero,
-      ancestor: context.findRenderObject(),
-    );
+    final RenderBox renderBox =
+        key.currentContext?.findRenderObject() as RenderBox;
+    final position = renderBox.localToGlobal(Offset.zero,
+        ancestor: context.findRenderObject());
 
     final offset = position.dy + _scrollController.offset - _searchBarHeight;
 
@@ -172,25 +167,24 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
       final key = _itemKeys[i];
 
       final context = key!.currentContext;
+      if (context != null) {
+        final renderBox = context.findRenderObject() as RenderBox;
 
-      if (context == null) continue;
-      final renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox == null) return;
+        final position = renderBox.localToGlobal(
+          Offset.zero,
+          ancestor: this.context.findRenderObject(),
+        );
 
-      final position = renderBox.localToGlobal(
-        Offset.zero,
-        ancestor: this.context.findRenderObject(),
-      );
+        var category = _categories[i].category;
+        final double dy = position.dy - searchHeight;
 
-      var category = _categories[i].category;
-      final double dy = position.dy - searchHeight;
-
-      if (dy < 0) {
-        if (_activeCategory.name != category.name) {
-          _activeCategory = category;
-          _tabController.animateTo(i);
+        if (dy < 0) {
+          if (_activeCategory.name != category.name) {
+            _activeCategory = category;
+            _tabController.animateTo(i);
+          }
+          break;
         }
-        break;
       }
     }
   }
@@ -274,7 +268,8 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
       setActiveCategory: _setActiveCategory,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          _emojiSize = _viewConfigs.getEmojiSize(constraints.maxWidth);
+          _emojiSize =
+              widget.config.emojiViewConfig.getEmojiSize(constraints.maxWidth);
 
           _emojiBoxSize = widget.config.emojiViewConfig
               .getEmojiBoxSize(constraints.maxWidth);
@@ -282,7 +277,7 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
 
           return EmojiContainer(
             color: widget.emojiEditorStyle.backgroundColor,
-            buttonMode: _viewConfigs.buttonMode,
+            buttonMode: widget.config.emojiViewConfig.buttonMode,
             child: Column(
               children: [
                 widget.config.viewOrderConfig.top,
@@ -354,38 +349,38 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
   Widget _buildPage(CategoryEmoji categoryEmoji) {
     // Build page normally
     return SliverPadding(
-      padding: _viewConfigs.gridPadding.copyWith(
-        bottom: _viewConfigs.gridPadding.bottom + 20,
+      padding: widget.config.emojiViewConfig.gridPadding.copyWith(
+        bottom: widget.config.emojiViewConfig.gridPadding.bottom + 20,
       ),
       sliver: SliverGrid.builder(
         key: ValueKey('emojiScrollView-${categoryEmoji.category.name}'),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           childAspectRatio: 1,
-          crossAxisCount: _viewConfigs.columns,
-          mainAxisSpacing: _viewConfigs.verticalSpacing,
-          crossAxisSpacing: _viewConfigs.horizontalSpacing,
+          crossAxisCount: widget.config.emojiViewConfig.columns,
+          mainAxisSpacing: widget.config.emojiViewConfig.verticalSpacing,
+          crossAxisSpacing: widget.config.emojiViewConfig.horizontalSpacing,
         ),
         itemCount: categoryEmoji.emoji.length,
         itemBuilder: (context, index) {
-          final emoji = categoryEmoji.emoji[index];
           Widget cell = EmojiCellExtended(
-            emoji: emoji,
+            emoji: categoryEmoji.emoji[index],
             emojiSize: _emojiSize,
             emojiBoxSize: _emojiBoxSize,
             categoryEmoji: categoryEmoji,
             emojiStyle: _emojiStyle,
             onEmojiSelected: _onSkinTonedEmojiSelected,
             onSkinToneDialogRequested: _openSkinToneDialog,
-            buttonMode: _viewConfigs.buttonMode,
+            buttonMode: widget.config.emojiViewConfig.buttonMode,
             enableSkinTones: widget.config.skinToneConfig.enabled,
             skinToneIndicatorColor: widget.config.skinToneConfig.indicatorColor,
           );
 
-          if (!emoji.hasSkinTone) {
+          if (!categoryEmoji.emoji[index].hasSkinTone) {
             return cell;
           } else {
             return addSkinToneTargetIfAvailableExtended(
-              linkKey: categoryEmoji.category.name + emoji.emoji,
+              linkKey: categoryEmoji.category.name +
+                  categoryEmoji.emoji[index].emoji,
               child: cell,
             );
           }
@@ -399,7 +394,10 @@ class _DefaultEmojiPickerViewState extends State<ProEmojiPickerView>
     required Widget child,
   }) {
     final link = links.putIfAbsent(linkKey, LayerLink.new);
-    return CompositedTransformTarget(link: link, child: child);
+    return CompositedTransformTarget(
+      link: link,
+      child: child,
+    );
   }
 
   Widget _buildCategoryView() {

@@ -62,7 +62,11 @@ class WhatsappTextColorpicker extends StatelessWidget {
                 barPickerPadding -
                 MediaQuery.paddingOf(context).top,
           ),
-          color: textEditor.primaryColor,
+          onPositionChange: (value) {
+            textEditor.colorPosition = value;
+          },
+          initPosition: textEditor.colorPosition,
+          initialColor: textEditor.primaryColor,
           horizontal: false,
           thumbColor: Colors.white,
           cornerRadius: 10,

@@ -31,16 +31,4 @@ class MainEditorFontPreloader extends StatelessWidget {
       return const SizedBox.shrink();
     }
   }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-
-    properties.add(FlagProperty(
-      'isFontPreloaded',
-      value: kIsWeb && emojiEditorConfigs.enablePreloadWebFont,
-      ifTrue: 'enabled',
-      ifFalse: 'disabled',
-    ));
-  }
 }

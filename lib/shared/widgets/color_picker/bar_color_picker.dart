@@ -2,7 +2,6 @@
 import 'dart:math';
 
 // Flutter imports:
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '/core/models/editor_configs/pro_image_editor_configs.dart';
@@ -44,8 +43,8 @@ class BarColorPicker extends StatefulWidget {
     this.thumbRadius = 6,
     this.initialColor = const Color(0xffff0000),
     this.thumbColor = Colors.black,
-    this.padding = const EdgeInsets.only(left: 10, right: 5),
-    this.animationDuration = const Duration(milliseconds: 200),
+    this.onPositionChange,
+    this.initPosition,
     required this.colorListener,
     required this.configs,
   });
@@ -73,6 +72,13 @@ class BarColorPicker extends StatefulWidget {
 
   /// The initial color to be displayed.
   final Color initialColor;
+
+  /// Callback function that is called when the thumb position changes.
+  final ValueChanged<double>? onPositionChange;
+
+  /// The initial position of the thumb in the bar. If not provided, it will be
+  /// estimated based on the gradient and an initial color.
+  final double? initPosition;
 
   /// Image editor configurations.
   final ProImageEditorConfigs configs;
@@ -128,7 +134,29 @@ class _BarColorPickerState extends State<BarColorPicker>
     }
 
     // Initialize 'percent' based on 'initPosition' or target 'initialColor'.
-    percent = _estimateColorPositionInGradient(colors, widget.color);
+    percent = widget.initPosition ??
+        _estimateColorPositionInGradient(colors, widget.initialColor);
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeIn,
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   /// Estimates the position of a color within the gradient.
@@ -195,6 +223,7 @@ class _BarColorPickerState extends State<BarColorPicker>
   /// Gets the color at a specific position within the gradient.
   Color _getColorAtPosition(Gradient gradient, double position) {
     // Ensure the position is within the valid range
+    widget.onPositionChange?.call(position);
     position = position.clamp(0.0, 1.0);
 
     if (position < 0) {
@@ -259,10 +288,6 @@ class _BarColorPickerState extends State<BarColorPicker>
       alignment: Alignment.topCenter,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTap: () {
-          // Important:
-          // Don't remove onTap, cuz it prevent that events are emitted.
-        },
         onPanDown: (details) =>
             handleTouch(details.globalPosition, context, gradient),
         onPanStart: (details) =>
@@ -372,8 +397,7 @@ class _BarColorPickerState extends State<BarColorPicker>
   /// calculate colors picked from palette and update our states.
   void handleTouch(
       Offset globalPosition, BuildContext context, Gradient gradient) {
-    var box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
+    var box = context.findRenderObject() as RenderBox;
     var localPosition = box.globalToLocal(globalPosition);
     double percent;
     if (widget.horizontal) {
@@ -396,27 +420,5 @@ class _BarColorPickerState extends State<BarColorPicker>
             Color.fromARGB(0xff, channel, channel, channel).toHex());
         break;
     }
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties
-      ..add(EnumProperty<PickMode>('pickMode', widget.pickMode))
-      ..add(DoubleProperty('length', widget.length))
-      ..add(ColorProperty('color', widget.color))
-      ..add(ColorProperty('thumbColor', widget.thumbColor))
-      ..add(DoubleProperty('thumbRadius', widget.thumbRadius))
-      ..add(DoubleProperty('cornerRadius', widget.cornerRadius))
-      ..add(DoubleProperty('borderWidth', widget.borderWidth))
-      ..add(DiagnosticsProperty<EdgeInsets>('padding', widget.padding))
-      ..add(DiagnosticsProperty<Duration>(
-          'animationDuration', widget.animationDuration))
-      ..add(FlagProperty('horizontal',
-          value: widget.horizontal, ifTrue: 'horizontal', ifFalse: 'vertical'))
-      ..add(FlagProperty('showThumb',
-          value: widget.showThumb, ifTrue: 'thumb visible'))
-      ..add(PercentProperty('percent', percent))
-      ..add(IterableProperty<Color>('colors', colors));
   }
 }

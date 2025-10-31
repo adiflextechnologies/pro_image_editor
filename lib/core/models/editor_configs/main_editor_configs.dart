@@ -1,15 +1,13 @@
 import 'package:flutter/widgets.dart';
 
-import '/features/crop_rotate_editor/models/transform_configs.dart';
+import '/features/crop_rotate_editor/models/transform_factors.dart';
 import '/shared/utils/decode_image.dart';
-import '../../enums/editor_mode.dart';
 import '../custom_widgets/main_editor_widgets.dart';
 import '../icons/main_editor_icons.dart';
 import '../styles/main_editor_style.dart';
 import 'utils/editor_safe_area.dart';
 import 'utils/zoom_configs.dart';
 
-export '../../enums/editor_mode.dart';
 export '../custom_widgets/main_editor_widgets.dart';
 export '../icons/main_editor_icons.dart';
 export '../styles/main_editor_style.dart';
@@ -26,22 +24,9 @@ class MainEditorConfigs extends ZoomConfigs {
     super.doubleTapZoomDuration,
     super.doubleTapZoomCurve,
     super.boundaryMargin,
-    super.invertTrackpadDirection,
     this.transformSetup,
     this.enableCloseButton = true,
     this.enableEscapeButton = true,
-    this.canZoomWhenLayerSelected = true,
-    this.mobilePanInteraction = MobilePanInteraction.move,
-    this.tools = const [
-      SubEditorMode.paint,
-      SubEditorMode.text,
-      SubEditorMode.cropRotate,
-      SubEditorMode.tune,
-      SubEditorMode.filter,
-      SubEditorMode.blur,
-      SubEditorMode.emoji,
-      // SubEditorMode.sticker,
-    ],
     this.style = const MainEditorStyle(),
     this.icons = const MainEditorIcons(),
     this.widgets = const MainEditorWidgets(),
@@ -50,13 +35,6 @@ class MainEditorConfigs extends ZoomConfigs {
 
   /// Determines whether the close button is displayed on the widget.
   final bool enableCloseButton;
-
-  /// Defines the configuration for pan interactions on mobile devices.
-  ///
-  /// This property specifies how users can interact with the editor
-  /// using pan gestures on mobile platforms. It allows customization
-  /// of the behavior and sensitivity of panning actions.
-  final MobilePanInteraction mobilePanInteraction;
 
   /// A boolean flag to enable or disable the escape button functionality.
   ///
@@ -83,28 +61,6 @@ class MainEditorConfigs extends ZoomConfigs {
   /// Defines the safe area configuration for the editor.
   final EditorSafeArea safeArea;
 
-  /// Defines which sub-editors are available in the bottom-bar of the editor.
-  ///
-  /// The order of the tools in this list determines the order in the UI.
-  /// Simply include the tools you want and leave out the ones you don’t.
-  ///
-  /// Example:
-  /// ```dart
-  /// PaintEditorConfigs(
-  ///   tools: [
-  ///      SubEditorMode.paint,
-  ///      SubEditorMode.text,
-  ///      SubEditorMode.cropRotate,
-  ///      SubEditorMode.tune,
-  ///      SubEditorMode.filter,
-  ///      SubEditorMode.blur,
-  ///      SubEditorMode.emoji,
-  ///      SubEditorMode.sticker,
-  ///   ],
-  /// )
-  /// ```
-  final List<SubEditorMode> tools;
-
   /// Creates a copy of this `MainEditorConfigs` object with the given fields
   /// replaced with new values.
   ///
@@ -123,14 +79,10 @@ class MainEditorConfigs extends ZoomConfigs {
     double? editorMaxScale,
     EdgeInsets? boundaryMargin,
     bool? enableDoubleTapZoom,
-    bool? canZoomWhenLayerSelected,
-    MobilePanInteraction? mobilePanInteraction,
-    bool? invertTrackpadDirection,
     double? doubleTapZoomFactor,
     Duration? doubleTapZoomDuration,
     Curve? doubleTapZoomCurve,
     EditorSafeArea? safeArea,
-    List<SubEditorMode>? tools,
   }) {
     return MainEditorConfigs(
       enableCloseButton: enableCloseButton ?? this.enableCloseButton,
@@ -143,18 +95,12 @@ class MainEditorConfigs extends ZoomConfigs {
       editorMinScale: editorMinScale ?? this.editorMinScale,
       editorMaxScale: editorMaxScale ?? this.editorMaxScale,
       enableDoubleTapZoom: enableDoubleTapZoom ?? this.enableDoubleTapZoom,
-      canZoomWhenLayerSelected:
-          canZoomWhenLayerSelected ?? this.canZoomWhenLayerSelected,
-      mobilePanInteraction: mobilePanInteraction ?? this.mobilePanInteraction,
-      invertTrackpadDirection:
-          invertTrackpadDirection ?? this.invertTrackpadDirection,
       doubleTapZoomFactor: doubleTapZoomFactor ?? this.doubleTapZoomFactor,
       doubleTapZoomDuration:
           doubleTapZoomDuration ?? this.doubleTapZoomDuration,
       doubleTapZoomCurve: doubleTapZoomCurve ?? this.doubleTapZoomCurve,
       boundaryMargin: boundaryMargin ?? this.boundaryMargin,
       safeArea: safeArea ?? this.safeArea,
-      tools: tools ?? this.tools,
     );
   }
 }
@@ -189,17 +135,4 @@ class MainEditorTransformSetup {
   ///
   /// Returns a new instance of [MainEditorTransformSetup] with the updated
   /// fields.
-}
-
-/// Enum representing the different types of pan interactions available
-/// in a mobile editor context.
-enum MobilePanInteraction {
-  /// Allows the user to drag and select elements.
-  dragSelect,
-
-  /// Enables moving the canvas.
-  move,
-
-  /// Disables any pan interaction.
-  none,
 }

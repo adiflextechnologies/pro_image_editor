@@ -1,13 +1,9 @@
-// ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
 // Project imports:
 import '/features/filter_editor/utils/filter_generator/filter_model.dart';
 
 import '../custom_widgets/filter_editor_widgets.dart';
 import '../icons/filter_editor_icons.dart';
 import '../styles/filter_editor_style.dart';
-import 'utils/base_sub_editor_configs.dart';
 import 'utils/editor_safe_area.dart';
 
 export '../custom_widgets/filter_editor_widgets.dart';
@@ -29,17 +25,12 @@ export '../styles/filter_editor_style.dart';
 ///   ],
 /// );
 /// ```
-class FilterEditorConfigs implements BaseSubEditorConfigs {
+class FilterEditorConfigs {
   /// Creates an instance of FilterEditorConfigs with optional settings.
   ///
   /// By default, the editor is enabled, and the filter list contains all
   /// filters.
   const FilterEditorConfigs({
-    this.enableGesturePop = true,
-    @Deprecated(
-      'Use tools inside MainEditorConfigs instead, e.g. tools: '
-      '[SubEditorMode.filter]',
-    )
     this.enabled = true,
     this.showLayers = true,
     this.filterList,
@@ -51,15 +42,7 @@ class FilterEditorConfigs implements BaseSubEditorConfigs {
     this.widgets = const FilterEditorWidgets(),
   });
 
-  /// {@macro enableGesturePop}
-  @override
-  final bool enableGesturePop;
-
   /// Indicates whether the filter editor is enabled.
-  @Deprecated(
-    'Use tools inside MainEditorConfigs instead, e.g. tools: '
-    '[SubEditorMode.filter]',
-  )
   final bool enabled;
 
   /// Show also layers in the editor.
@@ -101,7 +84,6 @@ class FilterEditorConfigs implements BaseSubEditorConfigs {
   /// [FilterEditorConfigs] with some properties updated while keeping the
   /// others unchanged.
   FilterEditorConfigs copyWith({
-    bool? enableGesturePop,
     bool? enabled,
     bool? showLayers,
     List<FilterModel>? filterList,
@@ -113,7 +95,6 @@ class FilterEditorConfigs implements BaseSubEditorConfigs {
     FilterEditorWidgets? widgets,
   }) {
     return FilterEditorConfigs(
-      enableGesturePop: enableGesturePop ?? this.enableGesturePop,
       safeArea: safeArea ?? this.safeArea,
       enabled: enabled ?? this.enabled,
       showLayers: showLayers ?? this.showLayers,

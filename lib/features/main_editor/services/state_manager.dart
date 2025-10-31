@@ -1,22 +1,12 @@
-import '/core/models/editor_image.dart';
 import '/core/models/history/state_history.dart';
 import '/core/models/layers/layer.dart';
 import '/core/models/multi_threading/thread_capture_model.dart';
+import '/features/crop_rotate_editor/models/transform_factors.dart';
 import '/features/filter_editor/types/filter_matrix.dart';
 import '/features/tune_editor/models/tune_adjustment_matrix.dart';
-import '../../crop_rotate_editor/models/transform_configs.dart';
 
 /// A class for managing the state and history of image editing changes.
 class StateManager {
-  /// Creates an instance of [StateManager].
-  StateManager({
-    required this.onStateHistoryChange,
-    required this.activeBackgroundImage,
-  });
-
-  /// Optional callbacks for additional editor actions.
-  final Function()? onStateHistoryChange;
-
   /// Position in the state history.
   int _historyPointer = 0;
 
@@ -48,34 +38,6 @@ class StateManager {
   /// This list provides a record of changes applied to the image, allowing
   /// for undo/redo functionality.
   List<EditorStateHistory> get stateHistory => _stateHistory;
-
-  final Map<int, EditorImage> _backgroundImages = {};
-
-  /// The currently active background image in the editor.
-  EditorImage? activeBackgroundImage;
-
-  /// Updates the background images in the editor's history.
-  ///
-  /// Replaces the background image at the current history pointer with
-  /// [oldImage], and sets the next history entry to [newImage]. Also updates
-  /// the [activeBackgroundImage] to [newImage].
-  ///
-  /// Parameters:
-  /// - [oldImage]: The previous background image to store at the current
-  /// history pointer.
-  /// - [newImage]: The new background image to store at the next history
-  /// pointer.
-  void updateBackgroundImages({
-    required EditorImage oldImage,
-    required EditorImage newImage,
-  }) {
-    _backgroundImages[historyPointer - 1] ??= oldImage.copyWith();
-    _backgroundImages[historyPointer] = newImage.copyWith();
-    activeBackgroundImage = newImage.copyWith();
-    for (var item in screenshots) {
-      item.broken = true;
-    }
-  }
 
   /// A setter for updating the state history list.
   /// When a new list of editor states is assigned, it triggers
@@ -119,6 +81,14 @@ class StateManager {
         .tuneAdjustments;
 
     activeLayers = _stateHistory[historyPointer].layers;
+    /* activeHistory.where((item) => item.layers != null).forEach((entry) {
+      for (var layer in entry.layers!) {
+        _activeLayers.removeWhere((el) => el.id == layer.id);
+        if (!layer.isDeleted) {
+          _activeLayers.add(layer);
+        }
+      }
+    }); */
 
     _transformConfigs = activeHistory
             .lastWhere((item) => item.transformConfigs != null,
@@ -131,12 +101,6 @@ class StateManager {
                 orElse: EditorStateHistory.new)
             .blur ??
         0.0;
-
-    onStateHistoryChange?.call();
-
-    if (_backgroundImages[historyPointer] != null) {
-      activeBackgroundImage = _backgroundImages[historyPointer]!.copyWith();
-    }
   }
 
   /// A list of active filters applied to the image.
@@ -220,7 +184,6 @@ class StateManager {
       while (_historyPointer < screenshots.length) {
         screenshots.removeLast();
       }
-      _backgroundImages.removeWhere((index, _) => index > _historyPointer);
     }
     _historyPointer = _stateHistory.length - 1;
   }

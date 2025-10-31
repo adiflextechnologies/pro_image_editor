@@ -1,6 +1,3 @@
-// ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
 // Dart imports:
 import 'dart:ui';
 
@@ -46,16 +43,12 @@ class _WhatsAppStickerPageState extends State<WhatsAppStickerPage> {
   late TextEditingController _searchCtrl;
   late FocusNode _searchFocus;
 
-  late final bool _isStickerEditorEnabled =
-      widget.configs.stickerEditor.enabled &&
-          widget.configs.mainEditor.tools.contains(SubEditorMode.sticker);
-
   @override
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController();
     _searchFocus = FocusNode();
-    if (!_isStickerEditorEnabled) {
+    if (!widget.configs.stickerEditor.enabled) {
       whatsAppTemporaryStickerMode = WhatsAppStickerMode.emoji;
     }
   }
@@ -93,7 +86,7 @@ class _WhatsAppStickerPageState extends State<WhatsAppStickerPage> {
                         configs: widget.configs,
                       ),
                     ),
-                    if (_isStickerEditorEnabled)
+                    if (widget.configs.stickerEditor.enabled)
                       Offstage(
                         offstage: whatsAppTemporaryStickerMode !=
                             WhatsAppStickerMode.sticker,
@@ -178,7 +171,7 @@ class _WhatsAppStickerPageState extends State<WhatsAppStickerPage> {
                         color: Colors.white,
                       ),
                     ),
-                    if (_isStickerEditorEnabled)
+                    if (widget.configs.stickerEditor.enabled)
                       Align(
                         alignment: Alignment.center,
                         child: SegmentedButton(
@@ -242,11 +235,12 @@ class _WhatsAppStickerPageState extends State<WhatsAppStickerPage> {
       ),
       AnimatedSwitcher(
         duration: const Duration(milliseconds: 180),
-        reverseDuration: _isStickerEditorEnabled ? null : const Duration(),
+        reverseDuration:
+            widget.configs.stickerEditor.enabled ? null : const Duration(),
         switchInCurve: Curves.easeInOut,
         transitionBuilder: (child, animation) => FadeTransition(
           opacity: animation,
-          child: _isStickerEditorEnabled
+          child: widget.configs.stickerEditor.enabled
               ? SizeTransition(
                   sizeFactor: animation,
                   axisAlignment: -1,
@@ -263,14 +257,15 @@ class _WhatsAppStickerPageState extends State<WhatsAppStickerPage> {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: AnimatedSwitcher(
-          duration: Duration(milliseconds: _isStickerEditorEnabled ? 160 : 0),
+          duration: Duration(
+              milliseconds: widget.configs.stickerEditor.enabled ? 160 : 0),
           switchInCurve: Curves.easeInOut,
           transitionBuilder: (child, animation) => FadeTransition(
             opacity: animation,
             child: child,
           ),
           child: _activeSearch
-              ? (_isStickerEditorEnabled
+              ? (widget.configs.stickerEditor.enabled
                   ? Row(
                       children: [
                         Expanded(
@@ -293,7 +288,8 @@ class _WhatsAppStickerPageState extends State<WhatsAppStickerPage> {
                         icon: const Icon(Icons.search),
                         color: Colors.white,
                       ),
-                      if (_isStickerEditorEnabled) _buildCupertinoSegments(),
+                      if (widget.configs.stickerEditor.enabled)
+                        _buildCupertinoSegments(),
                       IconButton(
                         onPressed: null,
                         icon: Icon(

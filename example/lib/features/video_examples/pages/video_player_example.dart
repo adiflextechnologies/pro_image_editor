@@ -145,35 +145,18 @@ class _VideoPlayerExampleState extends State<VideoPlayerExample>
         ),
         mainEditor: MainEditorConfigs(
           widgets: MainEditorWidgets(
-            removeLayerArea: (
-              removeAreaKey,
-              editor,
-              rebuildStream,
-              isLayerBeingTransformed,
-            ) =>
+            removeLayerArea: (removeAreaKey, editor, rebuildStream) =>
                 VideoEditorRemoveArea(
               removeAreaKey: removeAreaKey,
               editor: editor,
               rebuildStream: rebuildStream,
-              isLayerBeingTransformed: isLayerBeingTransformed,
             ),
           ),
         ),
         paintEditor: const PaintEditorConfigs(
-          tools: [
-            PaintMode.freeStyle,
-            PaintMode.arrow,
-            PaintMode.line,
-            PaintMode.rect,
-            PaintMode.circle,
-            PaintMode.dashLine,
-            PaintMode.dashDotLine,
-            PaintMode.polygon,
-            // Blur and pixelate are not supported.
-            // PaintMode.pixelate,
-            // PaintMode.blur,
-            PaintMode.eraser,
-          ],
+          /// Blur and pixelate are not supported.
+          enableModePixelate: false,
+          enableModeBlur: false,
         ),
         videoEditor: videoConfigs.copyWith(
           playTimeSmoothingDuration: const Duration(milliseconds: 600),

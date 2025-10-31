@@ -1,7 +1,6 @@
 // Dart imports:
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '/core/mixins/converted_callbacks.dart';
@@ -80,19 +79,20 @@ class TextEditorState extends State<TextEditor>
   /// Mode for managing the background color of the text layer.
   late LayerBackgroundMode backgroundColorMode;
 
+  /// Position of the color picker.
+  double colorPosition = 0;
+
   /// Represents the dimensions of the body.
   Size editorBodySize = Size.infinite;
 
   late double _fontScale;
-  final double _cursorWidth = 2.0;
 
-  double? get _maxTextWidth => textEditorConfigs.enableAutoOverflow
-      ? editorBodySize.width - 32 - _cursorWidth
-      : null;
+  Color _primaryColor = Colors.black;
 
   /// Gets the primary color.
   Color get primaryColor => _primaryColor;
-  late Color _primaryColor = textEditorConfigs.initialPrimaryColor;
+
+  /// Sets the primary color.
   set primaryColor(Color color) {
     setState(() {
       _primaryColor = color;
@@ -100,9 +100,12 @@ class TextEditorState extends State<TextEditor>
     });
   }
 
+  Color? _secondaryColor;
+
   /// Gets the secondary color.
   Color get secondaryColor => _secondaryColor ?? getContrastColor(primaryColor);
-  late Color? _secondaryColor = textEditorConfigs.initialSecondaryColor;
+
+  /// Sets the secondary color.
   set secondaryColor(Color color) {
     setState(() {
       _secondaryColor = color;
@@ -149,7 +152,7 @@ class TextEditorState extends State<TextEditor>
       textCtrl.text = widget.layer!.text;
       align = widget.layer!.align;
       _fontScale = widget.layer!.fontScale;
-      backgroundColorMode = widget.layer!.colorMode;
+      backgroundColorMode = widget.layer!.colorMode!;
       if (widget.layer!.customSecondaryColor) {
         _primaryColor = widget.layer!.color;
         _secondaryColor = widget.layer!.background;
@@ -158,6 +161,7 @@ class TextEditorState extends State<TextEditor>
             ? widget.layer!.background
             : widget.layer!.color;
       }
+      colorPosition = widget.layer!.colorPickerPosition ?? 0;
     }
   }
 
@@ -287,12 +291,12 @@ class TextEditorState extends State<TextEditor>
     );
   }
 
-  /// Update the current text style.
-  void setTextStyle(TextStyle style) {
-    setState(() {
-      selectedTextStyle = style;
-    });
-  }
+   /// Update the current text style.
+ void setTextStyle(TextStyle style) {
+  selectedTextStyle = style;
+  _rebuildController.add(null);   // preview listeners
+  if (mounted) setState(() {});   // ensure TextField rebuilds right away
+}
 
   /// Closes the editor without applying changes.
   void close() {
@@ -303,21 +307,20 @@ class TextEditorState extends State<TextEditor>
   /// Handles the "Done" action, either by applying changes or closing the
   /// editor.
   void done() {
-    if (textCtrl.text.trim().isNotEmpty || widget.layer != null) {
-      TextLayer layer = TextLayer(
-        text: textCtrl.text.trim(),
-        background: _backgroundColor,
-        color: _textColor,
-        align: align,
-        fontScale: _fontScale,
-        colorMode: backgroundColorMode,
-        textStyle: selectedTextStyle,
-        customSecondaryColor: _secondaryColor != null,
-        maxTextWidth:
-            textEditorConfigs.enableAutoOverflow ? _maxTextWidth : null,
+    if (textCtrl.text.trim().isNotEmpty) {
+      Navigator.of(context).pop(
+        TextLayer(
+          text: textCtrl.text.trim(),
+          background: _backgroundColor,
+          color: _textColor,
+          align: align,
+          fontScale: _fontScale,
+          colorMode: backgroundColorMode,
+          colorPickerPosition: colorPosition,
+          textStyle: selectedTextStyle,
+          customSecondaryColor: _secondaryColor != null,
+        ),
       );
-
-      Navigator.of(context).pop(layer);
     } else {
       Navigator.of(context).pop();
     }
@@ -329,7 +332,6 @@ class TextEditorState extends State<TextEditor>
     return LayoutBuilder(
       builder: (context, constraints) {
         return ExtendedPopScope(
-          canPop: textEditorConfigs.enableGesturePop,
           child: Theme(
             data: widget.theme.copyWith(
                 tooltipTheme:
@@ -426,15 +428,18 @@ class TextEditorState extends State<TextEditor>
 
   Widget _buildColorPicker() {
     return TextEditorColorPicker(
-      state: this,
-      configs: configs,
-      primaryColor: primaryColor,
-      rebuildController: _rebuildController,
-      selectedTextStyle: selectedTextStyle,
-      onUpdateColor: (color) {
-        primaryColor = color;
-      },
-    );
+        state: this,
+        configs: configs,
+        colorPosition: colorPosition,
+        primaryColor: primaryColor,
+        rebuildController: _rebuildController,
+        selectedTextStyle: selectedTextStyle,
+        onUpdateColor: (color) {
+          primaryColor = color;
+        },
+        onPositionChange: (value) {
+          colorPosition = value;
+        });
   }
 
   /// Builds the text field for text input.
@@ -453,28 +458,6 @@ class TextEditorState extends State<TextEditor>
       selectedTextStyle: selectedTextStyle,
       textColor: _textColor,
       textFontSize: _textFontSize,
-      maxWidth: _maxTextWidth ?? double.infinity,
-      cursorWidth: _cursorWidth,
     );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-
-    properties
-      ..add(StringProperty('heroTag', widget.heroTag))
-      ..add(DoubleProperty('scaleFactor', widget.scaleFactor))
-      ..add(DiagnosticsProperty<TextLayer?>('layer', widget.layer))
-      ..add(DiagnosticsProperty<ThemeData>('theme', widget.theme))
-      ..add(DiagnosticsProperty<TextAlign>('align', align))
-      ..add(DiagnosticsProperty<TextStyle>(
-          'selectedTextStyle', selectedTextStyle))
-      ..add(EnumProperty<LayerBackgroundMode>(
-          'backgroundColorMode', backgroundColorMode))
-      ..add(DoubleProperty('fontScale', _fontScale))
-      ..add(ColorProperty('primaryColor', primaryColor))
-      ..add(ColorProperty('secondaryColor', secondaryColor))
-      ..add(DiagnosticsProperty<Size>('editorBodySize', editorBodySize));
   }
 }

@@ -1,3 +1,6 @@
+// Dart imports:
+import 'dart:typed_data';
+
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -34,107 +37,7 @@ void main() {
       ),
     ));
 
-      expect(find.byType(ProImageEditor), findsOneWidget);
-    });
-    testWidgets('creates MainEditor using network image',
-        (WidgetTester tester) async {
-      await mockNetworkImagesFor(() async {
-        await tester.pumpWidget(MaterialApp(
-          home: ProImageEditor.network(
-            mockNetworkImage,
-            configs: configs,
-            callbacks: callbacks,
-          ),
-        ));
-      });
-
-      expect(find.byType(ProImageEditor), findsOneWidget);
-    });
-    testWidgets('creates MainEditor using file image',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: ProImageEditor.file(
-          mockFileImage,
-          configs: configs,
-          callbacks: callbacks,
-        ),
-      ));
-
-      expect(find.byType(ProImageEditor), findsOneWidget);
-    });
-    testWidgets('creates MainEditor using file path',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: ProImageEditor.file(
-          '',
-          configs: configs,
-          callbacks: callbacks,
-        ),
-      ));
-
-      expect(find.byType(ProImageEditor), findsOneWidget);
-    });
-    testWidgets('creates MainEditor using blank', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: ProImageEditor.blank(
-          const Size(1080, 1920),
-          configs: configs,
-          callbacks: callbacks,
-        ),
-      ));
-
-      expect(find.byType(ProImageEditor), findsOneWidget);
-    });
-    group('creates MainEditor using autoSource constructor', () {
-      testWidgets('Auto-detects from memory image',
-          (WidgetTester tester) async {
-        await tester.pumpWidget(MaterialApp(
-          home: ProImageEditor.autoSource(
-            byteArray: mockMemoryImage,
-            configs: configs,
-            callbacks: callbacks,
-          ),
-        ));
-
-        expect(find.byType(ProImageEditor), findsOneWidget);
-      });
-      testWidgets('Auto-detects from network image',
-          (WidgetTester tester) async {
-        await mockNetworkImagesFor(() async {
-          await tester.pumpWidget(MaterialApp(
-            home: ProImageEditor.autoSource(
-              networkUrl: mockNetworkImage,
-              configs: configs,
-              callbacks: callbacks,
-            ),
-          ));
-        });
-
-        expect(find.byType(ProImageEditor), findsOneWidget);
-      });
-      testWidgets('Auto-detects from file image', (WidgetTester tester) async {
-        await tester.pumpWidget(MaterialApp(
-          home: ProImageEditor.autoSource(
-            file: mockFileImage,
-            configs: configs,
-            callbacks: callbacks,
-          ),
-        ));
-
-        expect(find.byType(ProImageEditor), findsOneWidget);
-      });
-      testWidgets('Auto-detects from file path', (WidgetTester tester) async {
-        await tester.pumpWidget(MaterialApp(
-          home: ProImageEditor.autoSource(
-            file: '',
-            configs: configs,
-            callbacks: callbacks,
-          ),
-        ));
-
-        expect(find.byType(ProImageEditor), findsOneWidget);
-      });
-    });
+    expect(find.byType(ProImageEditor), findsOneWidget);
   });
 
   testWidgets('ProImageEditor performs undo and redo action',
@@ -310,12 +213,14 @@ void main() {
               onImageEditingComplete: (Uint8List bytes) async {},
             ),
             configs: ProImageEditorConfigs(
-              mainEditor: const MainEditorConfigs(
-                tools: [
-                  SubEditorMode.sticker,
-                ],
+              paintEditor: const PaintEditorConfigs(enabled: false),
+              textEditor: const TextEditorConfigs(enabled: false),
+              cropRotateEditor: const CropRotateEditorConfigs(enabled: false),
+              emojiEditor: const EmojiEditorConfigs(
+                enabled: false,
               ),
               stickerEditor: StickerEditorConfigs(
+                enabled: true,
                 builder: (setLayer, scrollController) =>
                     Container(key: widgetKey),
                 style: StickerEditorStyle(

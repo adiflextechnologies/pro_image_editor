@@ -1,7 +1,8 @@
-import 'package:example/features/layer/layer_group_page.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '/features/ai/ai_group_page.dart';
+import '/features/background_remover/background_remover_stub_example.dart'
+    if (dart.library.io) '/features/background_remover/background_remover_example.dart';
 import '/features/crop_to_main_editor.dart';
 import '/features/custom_widgets_example.dart';
 import '/features/default_example.dart';
@@ -17,6 +18,7 @@ import '/features/movable_background_image.dart';
 import '/features/pick_image_example.dart';
 import '/features/reorder_layer_example.dart';
 import '/features/round_cropper_example.dart';
+import '/features/selectable_layer_example.dart';
 import '/features/signature_drawing_example.dart';
 import '/features/standalone_example.dart';
 import '/features/stickers_example.dart';
@@ -41,12 +43,6 @@ List<Example> kImageEditorExamples = const [
     name: 'Default-Editor',
     icon: Icons.dashboard_outlined,
     page: DefaultExample(),
-  ),
-  Example(
-    path: '/ai',
-    name: 'AI-Integration',
-    icon: Icons.hub_outlined,
-    page: AiGroupPage(),
   ),
   Example(
     path: '/designs',
@@ -111,10 +107,10 @@ List<Example> kImageEditorExamples = const [
     page: RoundCropperExample(),
   ),
   Example(
-    path: '/layer',
-    name: 'Layers',
-    icon: Icons.layers_outlined,
-    page: LayerGroupPage(),
+    path: '/selectable-layers',
+    name: 'Selectable-Layers',
+    icon: Icons.select_all_rounded,
+    page: SelectableLayerExample(),
   ),
   Example(
     path: '/generation-configs',

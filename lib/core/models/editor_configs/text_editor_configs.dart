@@ -1,6 +1,3 @@
-// ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
 // Flutter imports:
 import 'package:flutter/widgets.dart';
 
@@ -9,8 +6,6 @@ import '../custom_widgets/text_editor_widgets.dart';
 import '../icons/text_editor_icons.dart';
 import '../layers/enums/layer_background_mode.dart';
 import '../styles/text_editor_style.dart';
-import 'utils/base_editor_layer_configs.dart';
-import 'utils/base_sub_editor_configs.dart';
 import 'utils/editor_safe_area.dart';
 
 export '../custom_widgets/text_editor_widgets.dart';
@@ -32,20 +27,13 @@ export '../styles/text_editor_style.dart';
 ///   initFontSize: 24.0,
 /// );
 /// ```
-class TextEditorConfigs
-    implements BaseEditorLayerConfigs, BaseSubEditorConfigs {
+class TextEditorConfigs {
   /// Creates an instance of TextEditorConfigs with optional settings.
   ///
   /// By default, the text editor is enabled, and most text formatting options
   /// are enabled. The initial font size is set to 24.0.
   const TextEditorConfigs({
-    this.layerFractionalOffset = const Offset(-0.5, -0.5),
-    this.enableGesturePop = true,
     this.enableSuggestions = true,
-    @Deprecated(
-      'Use tools inside MainEditorConfigs instead, e.g. tools: '
-      '[SubEditorMode.text]',
-    )
     this.enabled = true,
     this.enableAutocorrect = true,
     this.showSelectFontStyleBottomBar = false,
@@ -53,10 +41,7 @@ class TextEditorConfigs
     this.showFontScaleButton = true,
     this.showBackgroundModeButton = true,
     this.enableMainEditorZoomFactor = false,
-    this.enableAutoOverflow = true,
     this.initFontSize = 24.0,
-    this.initialPrimaryColor = const Color(0xFF000000),
-    this.initialSecondaryColor,
     this.initialTextAlign = TextAlign.center,
     this.inputTextFieldAlign = Alignment.center,
     this.initFontScale = 1.0,
@@ -75,19 +60,7 @@ class TextEditorConfigs
         assert(maxScale >= minScale,
             'maxScale must be greater than or equal to minScale');
 
-  /// {@macro layerFractionalOffset}
-  @override
-  final Offset layerFractionalOffset;
-
-  /// {@macro enableGesturePop}
-  @override
-  final bool enableGesturePop;
-
   /// Indicates whether the text editor is enabled.
-  @Deprecated(
-    'Use tools inside MainEditorConfigs instead, e.g. tools: '
-    '[SubEditorMode.text]',
-  )
   final bool enabled;
 
   /// Whether to show the toggle button to change the text align.
@@ -128,12 +101,6 @@ class TextEditorConfigs
 
   /// The min font font scale for text.
   final double minFontScale;
-
-  /// The initial primary color which is mostly the font color.
-  final Color initialPrimaryColor;
-
-  /// The initial secondary color which is mostly the background color.
-  final Color? initialSecondaryColor;
 
   /// The initial background color mode for the layer.
   final LayerBackgroundMode initialBackgroundColorMode;
@@ -186,14 +153,9 @@ class TextEditorConfigs
   /// [TextEditorConfigs] with some properties updated while keeping the
   /// others unchanged.
   TextEditorConfigs copyWith({
-    Offset? layerFractionalOffset,
-    bool? enableGesturePop,
     bool? enabled,
     bool? showSelectFontStyleBottomBar,
     bool? enableMainEditorZoomFactor,
-    bool? enableAutoOverflow,
-    Color? initialPrimaryColor,
-    Color? initialSecondaryColor,
     double? initFontSize,
     TextAlign? initialTextAlign,
     Alignment? inputTextFieldAlign,
@@ -213,19 +175,12 @@ class TextEditorConfigs
     TextEditorWidgets? widgets,
   }) {
     return TextEditorConfigs(
-      layerFractionalOffset:
-          layerFractionalOffset ?? this.layerFractionalOffset,
-      enableGesturePop: enableGesturePop ?? this.enableGesturePop,
       safeArea: safeArea ?? this.safeArea,
       enabled: enabled ?? this.enabled,
       showSelectFontStyleBottomBar:
           showSelectFontStyleBottomBar ?? this.showSelectFontStyleBottomBar,
       enableMainEditorZoomFactor:
           enableMainEditorZoomFactor ?? this.enableMainEditorZoomFactor,
-      enableAutoOverflow: enableAutoOverflow ?? this.enableAutoOverflow,
-      initialPrimaryColor: initialPrimaryColor ?? this.initialPrimaryColor,
-      initialSecondaryColor:
-          initialSecondaryColor ?? this.initialSecondaryColor,
       initFontSize: initFontSize ?? this.initFontSize,
       initialTextAlign: initialTextAlign ?? this.initialTextAlign,
       inputTextFieldAlign: inputTextFieldAlign ?? this.inputTextFieldAlign,

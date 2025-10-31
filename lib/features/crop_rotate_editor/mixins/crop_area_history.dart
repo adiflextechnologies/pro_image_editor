@@ -11,7 +11,7 @@ import '/shared/widgets/extended/extended_custom_paint.dart';
 import '/shared/widgets/extended/extended_transform_scale.dart';
 import '/shared/widgets/extended/extended_transform_translate.dart';
 import '../crop_rotate_editor.dart';
-import '../models/transform_configs.dart';
+import '../models/transform_factors.dart';
 import '../utils/crop_aspect_ratios.dart';
 import '../widgets/crop_corner_painter.dart';
 
@@ -227,21 +227,6 @@ mixin CropAreaHistory
   /// available in the history, allowing for redo operations.
   bool get canRedo => screenshotHistoryPosition < history.length - 1;
 
-  /// Sets the crop mode for the editor.
-  ///
-  /// [value] specifies the crop mode to be set.
-  ///
-  /// [updateStates] determines whether the internal states should be updated.
-  /// Defaults to `true`.
-  ///
-  /// [updateHistory] determines whether the action should be recorded in the
-  /// history for undo/redo functionality. Defaults to `true`.
-  void setCropMode(
-    CropMode value, {
-    bool updateStates = true,
-    bool updateHistory = true,
-  });
-
   /// Initializes the transformation history with a specific configuration.
   ///
   /// This method clears any existing transformation history and sets the
@@ -313,24 +298,26 @@ mixin CropAreaHistory
   /// Undoes the last action performed in the crop-rotate editor.
   void undoAction() {
     if (canUndo) {
-      screenshotHistoryPosition--;
-      if (screenshotHistoryPosition == 0) {
-        reset(skipAddHistory: true);
-      } else {
-        _setParametersFromHistory();
-      }
-      cropRotateEditorCallbacks?.handleUndo();
-      setState(() {});
+      setState(() {
+        screenshotHistoryPosition--;
+        if (screenshotHistoryPosition == 0) {
+          reset(skipAddHistory: true);
+        } else {
+          _setParametersFromHistory();
+        }
+        cropRotateEditorCallbacks?.handleUndo();
+      });
     }
   }
 
   /// Redoes the previously undone action in the crop-rotate editor.
   void redoAction() {
     if (canRedo) {
-      screenshotHistoryPosition++;
-      _setParametersFromHistory();
-      cropRotateEditorCallbacks?.handleRedo();
-      setState(() {});
+      setState(() {
+        screenshotHistoryPosition++;
+        _setParametersFromHistory();
+        cropRotateEditorCallbacks?.handleRedo();
+      });
     }
   }
 
@@ -344,7 +331,7 @@ mixin CropAreaHistory
     aspectRatio = activeHistory.aspectRatio < 0
         ? cropRect.size.aspectRatio
         : activeHistory.aspectRatio;
-    setCropMode(activeHistory.cropMode, updateHistory: false);
+
     rotationCount = (activeHistory.angle * 2 / pi).abs().toInt();
     rotateAnimation =
         Tween<double>(begin: rotateAnimation.value, end: activeHistory.angle)
@@ -389,10 +376,7 @@ mixin CropAreaHistory
     flipX = false;
     flipY = false;
     translate = Offset.zero;
-    setCropMode(
-      cropRotateEditorConfigs.initialCropMode,
-      updateHistory: false,
-    );
+
     int rCount = rotationCount % 4;
     rotateAnimation =
         Tween<double>(begin: rCount == 3 ? pi / 2 : -rCount * pi / 2, end: 0)
@@ -419,7 +403,10 @@ mixin CropAreaHistory
 
     initialized = true;
     if (!skipAddHistory) {
-      addHistory(scaleRotation: 1, angle: 0);
+      addHistory(
+        scaleRotation: 1,
+        angle: 0,
+      );
     }
 
     cropRotateEditorCallbacks?.handleReset();

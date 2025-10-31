@@ -132,7 +132,7 @@ class _BackgroundRemoverExampleState extends State<BackgroundRemoverExample>
           ReactiveWidget(
             stream: rebuildStream,
             builder: (_) =>
-                editor.isLayerBeingTransformed || editor.isSubEditorOpen
+                editor.selectedLayerIndex >= 0 || editor.isSubEditorOpen
                     ? const SizedBox.shrink()
                     : Positioned(
                         bottom: 20,
@@ -158,7 +158,7 @@ class _BackgroundRemoverExampleState extends State<BackgroundRemoverExample>
           ReactiveWidget(
             stream: rebuildStream,
             builder: (_) =>
-                editor.isLayerBeingTransformed || editor.isSubEditorOpen
+                editor.selectedLayerIndex >= 0 || editor.isSubEditorOpen
                     ? const SizedBox.shrink()
                     : Positioned(
                         bottom: 20,

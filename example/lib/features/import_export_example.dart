@@ -1,8 +1,10 @@
 import 'package:example/core/constants/example_constants.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
-import '/core/constants/history_demo/import_history_6_3_0_minified.dart';
+import '/core/constants/history_demo/import_history_6_0_0_minified.dart';
 import '/core/mixin/example_helper.dart';
 
 /// The import export example
@@ -70,26 +72,6 @@ class _ImportExportExampleState extends State<ImportExportExample>
     ),
   );
 
-  void _export() async {
-    final editor = editorKey.currentState!;
-
-    var history = await editor.exportStateHistory(
-      configs: const ExportEditorConfigs(
-        historySpan: ExportHistorySpan.current,
-        maxDecimalPlaces: 3,
-        // configs...
-      ),
-    );
-
-    final result = await history.toJson();
-
-    debugPrint(result);
-
-    /*  final directory = await getTemporaryDirectory();
-    final path = '${directory.path}/PIE_Export.json';
-    await history.toFile(path: path); */
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!isPreCached) return const PrepareImageWidget();
@@ -119,44 +101,59 @@ class _ImportExportExampleState extends State<ImportExportExample>
               enableCloseButton: !isDesktopMode(context),
               widgets: MainEditorWidgets(
                 bodyItems: (editor, rebuildStream) {
-                  return [_buildExportButton(rebuildStream)];
+                  return [
+                    ReactiveWidget(
+                        builder: (_) {
+                          return Positioned(
+                            bottom: 20,
+                            left: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.lightBlue.shade200,
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(100),
+                                  bottomRight: Radius.circular(100),
+                                ),
+                              ),
+                              child: IconButton(
+                                onPressed: () async {
+                                  var history = await editor.exportStateHistory(
+                                    configs: const ExportEditorConfigs(
+                                        historySpan:
+                                            ExportHistorySpan.currentAndBackward
+                                        // configs...
+                                        ),
+                                  );
+                                  debugPrint(await history.toJson());
+                                },
+                                icon: const Icon(
+                                  Icons.send_to_mobile_outlined,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        stream: rebuildStream),
+                  ];
                 },
               ),
             ),
+            emojiEditor: EmojiEditorConfigs(
+                checkPlatformCompatibility: !kIsWeb,
+                style: kIsWeb
+                    ? EmojiEditorStyle(
+                        textStyle: DefaultEmojiTextStyle.copyWith(
+                          fontFamily: GoogleFonts.notoColorEmoji().fontFamily,
+                        ),
+                      )
+                    : const EmojiEditorStyle()),
             stateHistory: StateHistoryConfigs(
               initStateHistory: _history,
             ),
           ),
         ),
       ],
-    );
-  }
-
-  ReactiveWidget _buildExportButton(Stream<void> rebuildStream) {
-    return ReactiveWidget(
-      builder: (_) {
-        return Positioned(
-          bottom: 20,
-          left: 0,
-          child: Container(
-            padding: const EdgeInsets.only(right: 4),
-            decoration: const BoxDecoration(
-              color: Colors.lightBlue,
-              borderRadius: BorderRadius.horizontal(
-                right: Radius.circular(100),
-              ),
-            ),
-            child: IconButton(
-              onPressed: _export,
-              icon: const Icon(
-                Icons.send_to_mobile_outlined,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
-      },
-      stream: rebuildStream,
     );
   }
 }

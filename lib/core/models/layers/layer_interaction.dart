@@ -1,6 +1,3 @@
-import '../../../shared/extensions/export_bool_extension.dart';
-import '../../../shared/utils/parser/bool_parser.dart';
-
 /// A class representing the interaction settings for a layer.
 ///
 /// The `LayerInteraction` class defines the enablement of various interaction
@@ -39,16 +36,11 @@ class LayerInteraction {
     keyConverter ??= (String key) => key;
 
     return LayerInteraction(
-      enableMove:
-          safeParseBool(map[keyConverter('enableMove')], fallback: true),
-      enableScale:
-          safeParseBool(map[keyConverter('enableScale')], fallback: true),
-      enableRotate:
-          safeParseBool(map[keyConverter('enableRotate')], fallback: true),
-      enableSelection:
-          safeParseBool(map[keyConverter('enableSelection')], fallback: true),
-      enableEdit:
-          safeParseBool(map[keyConverter('enableEdit')], fallback: true),
+      enableMove: map[keyConverter('enableMove')] ?? true,
+      enableScale: map[keyConverter('enableScale')] ?? true,
+      enableRotate: map[keyConverter('enableRotate')] ?? true,
+      enableSelection: map[keyConverter('enableSelection')] ?? true,
+      enableEdit: map[keyConverter('enableEdit')] ?? true,
     );
   }
 
@@ -142,15 +134,13 @@ class LayerInteraction {
   ///
   /// Returns a map representation of the interaction settings with keys
   /// corresponding to the property names.
-  Map<String, dynamic> toMap({
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMap() {
     return {
-      'enableMove': enableMove.minify(enableMinify),
-      'enableScale': enableScale.minify(enableMinify),
-      'enableRotate': enableRotate.minify(enableMinify),
-      'enableSelection': enableSelection.minify(enableMinify),
-      'enableEdit': enableEdit.minify(enableMinify),
+      'enableMove': enableMove,
+      'enableScale': enableScale,
+      'enableRotate': enableRotate,
+      'enableSelection': enableSelection,
+      'enableEdit': enableEdit,
     };
   }
 
@@ -159,21 +149,15 @@ class LayerInteraction {
   ///
   /// Only includes the properties where the current instance's values differ
   /// from the [interaction] reference.
-  Map<String, dynamic> toMapFromReference(
-    LayerInteraction interaction, {
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMapFromReference(LayerInteraction interaction) {
     return {
-      if (interaction.enableMove != enableMove)
-        'enableMove': enableMove.minify(enableMinify),
-      if (interaction.enableScale != enableScale)
-        'enableScale': enableScale.minify(enableMinify),
+      if (interaction.enableMove != enableMove) 'enableMove': enableMove,
+      if (interaction.enableScale != enableScale) 'enableScale': enableScale,
       if (interaction.enableRotate != enableRotate)
-        'enableRotate': enableRotate.minify(enableMinify),
+        'enableRotate': enableRotate,
       if (interaction.enableSelection != enableSelection)
-        'enableSelection': enableSelection.minify(enableMinify),
-      if (interaction.enableEdit != enableEdit)
-        'enableEdit': enableEdit.minify(enableMinify),
+        'enableSelection': enableSelection,
+      if (interaction.enableEdit != enableEdit) 'enableEdit': enableEdit,
     };
   }
 

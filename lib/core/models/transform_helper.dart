@@ -2,7 +2,7 @@
 import 'dart:ui';
 
 // Project imports:
-import '/features/crop_rotate_editor/models/transform_configs.dart';
+import '/features/crop_rotate_editor/models/transform_factors.dart';
 
 /// A helper class for managing transformation calculations in the image editor.
 ///

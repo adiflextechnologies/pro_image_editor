@@ -1,10 +1,7 @@
 // Flutter imports:
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-
 import '/core/models/editor_configs/pro_image_editor_configs.dart';
 import '/core/models/editor_image.dart';
-import '../extensions/double_extension.dart';
 import 'platform/platform_circular_progress_indicator.dart';
 
 /// A versatile widget for displaying images with various sources.
@@ -18,7 +15,6 @@ class AutoImage extends StatelessWidget {
     this.width,
     this.height,
     required this.configs,
-    this.enableCachedSize = false,
   });
 
   /// The image to be displayed, wrapped as an [EditorImage].
@@ -35,10 +31,6 @@ class AutoImage extends StatelessWidget {
   /// parent widget.
   final double? height;
 
-  /// Indicate to the engine that the image must be decoded at the specified
-  /// size.
-  final bool enableCachedSize;
-
   /// The design mode of the editor.
   final ProImageEditorConfigs configs;
 
@@ -52,7 +44,6 @@ class AutoImage extends StatelessWidget {
           fit: fit,
           width: width,
           height: height,
-          cacheWidth: enableCachedSize ? width?.toDevicePixels(context) : null,
         );
       case EditorImageType.file:
         return Image.file(
@@ -60,7 +51,6 @@ class AutoImage extends StatelessWidget {
           fit: fit,
           width: width,
           height: height,
-          cacheWidth: enableCachedSize ? width?.toDevicePixels(context) : null,
         );
       case EditorImageType.network:
         return Image.network(
@@ -68,7 +58,6 @@ class AutoImage extends StatelessWidget {
           fit: fit,
           width: width,
           height: height,
-          cacheWidth: enableCachedSize ? width?.toDevicePixels(context) : null,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) {
               return child;
@@ -87,22 +76,7 @@ class AutoImage extends StatelessWidget {
           fit: fit,
           width: width,
           height: height,
-          cacheWidth: enableCachedSize ? width?.toDevicePixels(context) : null,
         );
     }
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-
-    properties
-      ..add(DiagnosticsProperty<EditorImage>('image', image))
-      ..add(EnumProperty<EditorImageType>('imageType', image.type))
-      ..add(EnumProperty<BoxFit?>('fit', fit))
-      ..add(DoubleProperty('width', width))
-      ..add(DoubleProperty('height', height))
-      ..add(FlagProperty('enableCachedSize',
-          value: enableCachedSize, ifTrue: 'cached size enabled'));
   }
 }

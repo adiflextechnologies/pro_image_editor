@@ -1,13 +1,10 @@
 // ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
+// TODO: Remove deprecated
 import 'package:flutter/widgets.dart';
 
 import '/core/models/layers/layer.dart';
 import '../icons/sticker_editor_icons.dart';
 import '../styles/sticker_editor_style.dart';
-import 'utils/base_editor_layer_configs.dart';
-import 'utils/base_sub_editor_configs.dart';
 export '../icons/sticker_editor_icons.dart';
 export '../styles/sticker_editor_style.dart';
 
@@ -27,48 +24,29 @@ export '../styles/sticker_editor_style.dart';
 ///   },
 /// );
 /// ```
-class StickerEditorConfigs
-    implements BaseEditorLayerConfigs, BaseSubEditorConfigs {
+class StickerEditorConfigs {
   /// Creates an instance of StickerEditorConfigs with optional settings.
   ///
   /// By default, the editor is disabled (if not specified), and other
   /// properties are set to reasonable defaults.
   const StickerEditorConfigs({
-    this.layerFractionalOffset = const Offset(-0.5, -0.5),
-    this.enableGesturePop = true,
     this.builder,
     @Deprecated('Use [builder] instead') this.buildStickers,
     this.initWidth = 100,
     this.minScale = double.negativeInfinity,
     this.maxScale = double.infinity,
-    @Deprecated(
-      'Use tools inside MainEditorConfigs instead, e.g. tools: '
-      '[SubEditorMode.sticker]',
-    )
-    this.enabled = true,
+    this.enabled = false,
     this.style = const StickerEditorStyle(),
     this.icons = const StickerEditorIcons(),
   })  : assert(initWidth > 0, 'initWidth must be positive'),
         assert(maxScale >= minScale,
             'maxScale must be greater than or equal to minScale');
 
-  /// {@macro layerFractionalOffset}
-  @override
-  final Offset layerFractionalOffset;
-
-  /// {@macro enableGesturePop}
-  @override
-  final bool enableGesturePop;
-
   /// Indicates whether the sticker editor is enabled.
   ///
   /// When set to `true`, the sticker editor is active and users can interact
   /// with it.
   /// If `false`, the editor is disabled and does not respond to user inputs.
-  @Deprecated(
-    'Use tools inside MainEditorConfigs instead, e.g. tools: '
-    '[SubEditorMode.sticker]',
-  )
   final bool enabled;
 
   /// The initial width of the stickers in the editor.
@@ -108,8 +86,6 @@ class StickerEditorConfigs
   /// [StickerEditorConfigs] with some properties updated while keeping the
   /// others unchanged.
   StickerEditorConfigs copyWith({
-    Offset? layerFractionalOffset,
-    bool? enableGesturePop,
     bool? enabled,
     double? initWidth,
     StickerBuilder? builder,
@@ -120,9 +96,6 @@ class StickerEditorConfigs
     StickerEditorIcons? icons,
   }) {
     return StickerEditorConfigs(
-      layerFractionalOffset:
-          layerFractionalOffset ?? this.layerFractionalOffset,
-      enableGesturePop: enableGesturePop ?? this.enableGesturePop,
       enabled: enabled ?? this.enabled,
       initWidth: initWidth ?? this.initWidth,
       builder: builder ?? this.builder,

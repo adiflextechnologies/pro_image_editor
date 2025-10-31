@@ -82,13 +82,7 @@ class ProVideoController {
 
   /// Notifies listeners of the selected trim duration span.
   late final trimDurationSpanNotifier = ValueNotifier<TrimDurationSpan>(
-    TrimDurationSpan(
-      start: Duration.zero,
-      end: configs.maxTrimDuration == null ||
-              configs.maxTrimDuration! > videoDuration
-          ? videoDuration
-          : configs.maxTrimDuration!,
-    ),
+    TrimDurationSpan(start: Duration.zero, end: videoDuration),
   );
 
   /// Notifier that indicates whether the trim time span UI should be shown.

@@ -4,7 +4,6 @@ import '/core/mixins/converted_configs.dart';
 import '/core/mixins/editor_configs_mixin.dart';
 import '/designs/grounded/grounded_design.dart';
 import '/pro_image_editor.dart';
-import '/shared/widgets/editor_scrollbar.dart';
 
 /// A widget that represents a grounded tune adjustment bar for the editor.
 ///
@@ -124,8 +123,10 @@ class _GroundedTuneBarState extends State<GroundedTuneBar>
             const SizedBox(height: 4),
             SizedBox(
               height: kBottomNavigationBarHeight,
-              child: EditorScrollbar(
+              child: Scrollbar(
                 controller: tuneEditor.bottomBarScrollCtrl,
+                scrollbarOrientation: ScrollbarOrientation.bottom,
+                thickness: isDesktop ? null : 0,
                 child: SingleChildScrollView(
                   controller: tuneEditor.bottomBarScrollCtrl,
                   scrollDirection: Axis.horizontal,

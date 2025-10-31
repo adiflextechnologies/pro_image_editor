@@ -58,11 +58,14 @@ class StickerEditorState extends State<StickerEditor>
     );
 
     return ExtendedPopScope(
-      canPop: stickerEditorConfigs.enableGesturePop,
-      child: stickerEditorConfigs.builder!.call(
-        setLayer,
-        widget.scrollController,
-      ),
+      child: stickerEditorConfigs.builder?.call(
+            setLayer,
+            widget.scrollController,
+          ) ??
+          stickerEditorConfigs.buildStickers!(
+            setLayerOld,
+            widget.scrollController,
+          ),
     );
   }
 

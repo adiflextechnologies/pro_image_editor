@@ -6,15 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '/core/constants/editor_various_constants.dart';
-import '/core/constants/image_constants.dart';
 import '/core/mixins/converted_configs.dart';
 import '/core/mixins/editor_callbacks_mixin.dart';
 import '/core/mixins/editor_configs_mixin.dart';
 import '/core/models/history/last_layer_interaction_position.dart';
 import '/core/models/styles/draggable_sheet_style.dart';
-import '/core/services/gesture_manager.dart';
-import '/core/services/mouse_service.dart';
+import '/core/platform/io/io_helper.dart';
 import '/features/main_editor/widgets/main_editor_appbar.dart';
 import '/features/main_editor/widgets/main_editor_background_image.dart';
 import '/features/main_editor/widgets/main_editor_background_video.dart';
@@ -27,7 +24,6 @@ import '/shared/services/content_recorder/widgets/content_recorder.dart';
 import '/shared/services/import_export/export_state_history.dart';
 import '/shared/services/layer_transform_generator.dart';
 import '/shared/utils/file_constructor_utils.dart';
-import '/shared/utils/transparent_image_generator_utils.dart';
 import '/shared/widgets/adaptive_dialog.dart';
 import '/shared/widgets/extended/extended_interactive_viewer.dart';
 import '/shared/widgets/screen_resize_detector.dart';
@@ -40,7 +36,6 @@ import 'mixins/main_editor_global_keys.dart';
 import 'providers/image_infos_provider.dart';
 import 'services/desktop_interaction_manager.dart';
 import 'services/layer_copy_manager.dart';
-import 'services/layer_drag_selection_service.dart';
 import 'services/layer_interaction_manager.dart';
 import 'services/main_editor_state_history_service.dart';
 import 'services/sizes_manager.dart';
@@ -86,37 +81,35 @@ class ProImageEditor extends StatefulWidget
   /// to create an instance of this widget based on your image source.
   ///
   /// {@template mainEditorConfigs}
-  /// ### Parameters
-  /// - `key` *(optional)*: A [Key] used to uniquely identify the widget and
-  ///   preserve its state during rebuilds.
-  /// - `configs` *(optional)*: Defines customization options for the editor.
-  ///   If omitted, default settings are applied.
-  /// - `callbacks` *(required)*: Provides handlers for editor events and
-  ///   user interactions.
+  /// The `key` parameter is an optional parameter used to provide a `Key` to
+  /// the widget for identification and state preservation.
+  ///
+  /// The `configs` parameter allows you to customize the image editing
+  /// experience by providing various configuration options. If not specified,
+  /// default settings will be used.
+  ///
+  /// The `callbacks` parameter is required and specifies the callbacks to
+  /// handle events and interactions within the image editor.
   /// {@endtemplate}
   const ProImageEditor._({
     super.key,
     required this.callbacks,
-    this.blankSize,
     this.editorImage,
     this.videoController,
     this.configs = const ProImageEditorConfigs(),
-  }) : assert(
-          editorImage != null || videoController != null || blankSize != null,
-          'Either editorImage or videoController or blankSize must be '
-          'provided.',
-        );
+  }) : assert(editorImage != null || videoController != null,
+            'Either editorImage or videoController must be provided.');
 
   /// This constructor creates a `ProImageEditor` widget configured to edit an
   /// image loaded from the specified `byteArray`.
   ///
+  /// The `byteArray` parameter should contain the image data as a `Uint8List`.
   ///
   /// {@macro mainEditorConfigs}
-  /// - `byteArray` *(required)*: The image data as a `Uint8List`.
   ///
   /// Example usage:
   /// ```dart
-  /// ProImageEditor.memory(
+  /// ProImageEditor.ProImageEditor.memory(
   ///   bytes,
   /// {@template mainEditorDemoTemplateCode}
   ///   configs: ProImageEditorConfigs(),
@@ -153,13 +146,14 @@ class ProImageEditor extends StatefulWidget
   /// This constructor creates a `ProImageEditor` widget configured to edit an
   /// image loaded from the specified `file`.
   ///
+  /// The `file` parameter should be from the type `File` or the path to the
+  /// file.
+  ///
   /// {@macro mainEditorConfigs}
-  /// - `file` *(required)*: The image data as a `File` or a `String` which is
-  /// the path to the file.
   ///
   /// Example usage:
   /// ```dart
-  /// ProImageEditor.file(
+  /// ProImageEditor.ProImageEditor.file(
   ///   File(pathToMyFile),
   ///   {@macro mainEditorDemoTemplateCode}
   /// )
@@ -181,9 +175,9 @@ class ProImageEditor extends StatefulWidget
   /// This constructor creates a `ProImageEditor` widget configured to edit an
   /// image loaded from the specified `assetPath`.
   ///
+  /// The `assetPath` parameter should specify the path to the image asset.
+  ///
   /// {@macro mainEditorConfigs}
-  /// - `assetPath` *(required)*: The path to the image data in the local
-  /// assets folder.
   ///
   /// Example usage:
   /// ```dart
@@ -209,9 +203,10 @@ class ProImageEditor extends StatefulWidget
   /// This constructor creates a `ProImageEditor` widget configured to edit an
   /// image loaded from the specified `networkUrl`.
   ///
-  /// {@macro mainEditorConfigs}
-  /// - `networkUrl` *(required)*: The URL from which the image should be
+  /// The `networkUrl` parameter specifies the URL from which the image will be
   /// loaded.
+  ///
+  /// {@macro mainEditorConfigs}
   ///
   /// Example usage:
   /// ```dart
@@ -285,6 +280,14 @@ class ProImageEditor extends StatefulWidget
   /// ```
   ///
   /// Throws an [ArgumentError] if no valid image source is provided.
+  ///
+  /// - [byteArray] - Raw image data as a `Uint8List` (highest priority).
+  /// - [file] - A `File` instance representing a local image file.
+  /// - [networkUrl] - URL pointing to an image on the internet.
+  /// - [assetPath] - Path to an image stored in the app's assets.
+  /// - [editorImage] - An `EditorImage` instance containing one of the above.
+  /// - [configs] - Optional configuration settings for the editor.
+  /// - [callbacks] - Required callbacks for handling image editor events.
   factory ProImageEditor.autoSource({
     Key? key,
     Uint8List? byteArray,
@@ -311,52 +314,14 @@ class ProImageEditor extends StatefulWidget
     );
   }
 
-  /// Creates a blank ProImageEditor with the specified size.
-  ///
-  /// This constructor initializes a `ProImageEditor` with a blank canvas
-  /// of the given [size].
-  ///
-  /// The [size] is also used to set the maximum output size for
-  /// image generation in the editor configuration.
-  ///
-  /// {@macro mainEditorConfigs}
-  ///
-  /// Example usage:
-  /// ```dart
-  /// ProImageEditor.blank(
-  ///   Size(1080, 1920),
-  ///   {@macro mainEditorDemoTemplateCode}
-  /// )
-  /// ```
-  factory ProImageEditor.blank(
-    Size size, {
-    Key? key,
-    ProImageEditorConfigs configs = const ProImageEditorConfigs(),
-    required ProImageEditorCallbacks callbacks,
-  }) {
-    return ProImageEditor._(
-      key: key,
-      blankSize: size,
-      configs: configs.copyWith(
-        imageGeneration: configs.imageGeneration.copyWith(maxOutputSize: size),
-      ),
-      callbacks: callbacks,
-    );
-  }
-
   /// This constructor creates a `ProImageEditor` widget configured to edit an
   /// video.
   ///
   /// {@macro mainEditorConfigs}
-  /// - `videoController` *(required)*: The video-controller to control the
-  /// video.
   ///
   /// Example usage:
   ///
-  /// - [Example with video_player](https://github.com/hm21/pro_image_editor/blob/stable/example/lib/features/video_examples/pages/video_player_example.dart)
-  /// - [Example with media_kit](https://github.com/hm21/pro_image_editor/blob/stable/example/lib/features/video_examples/pages/video_media_kit_example.dart)
-  /// - [Example with chewie_player](https://github.com/hm21/pro_image_editor/blob/stable/example/lib/features/video_examples/pages/chewie_player_example.dart)
-  /// - [Example with flick_video_player](https://github.com/hm21/pro_image_editor/blob/stable/example/lib/features/video_examples/pages/flick_video_player_example.dart)
+  /// [Example with media_kit](https://github.com/hm21/pro_image_editor/blob/stable/example/lib/features/video_examples/pages/video_media_kit_example.dart)
   factory ProImageEditor.video(
     ProVideoController videoController, {
     Key? key,
@@ -381,9 +346,6 @@ class ProImageEditor extends StatefulWidget
 
   /// The controller for the video editor.
   final ProVideoController? videoController;
-
-  /// The size of the blank canvas when no image/video is present.
-  final Size? blankSize;
 
   @override
   State<ProImageEditor> createState() => ProImageEditorState();
@@ -417,22 +379,12 @@ class ProImageEditorState extends State<ProImageEditor>
   /// Helper class for managing interactions with layers in the editor.
   late final LayerInteractionManager layerInteractionManager =
       LayerInteractionManager(
-    onSelectedLayerChanged: mainEditorCallbacks?.onSelectedLayerChanged,
-    onSelectedLayersChanged: mainEditorCallbacks?.onSelectedLayersChanged,
     helperLinesCallbacks: mainEditorCallbacks?.helperLines,
     onSelectedLayerChanged: mainEditorCallbacks?.onSelectedLayerChanged,
   );
-  late final _mouseService = MouseService(
-    configs: configs,
-    interactionManager: layerInteractionManager,
-  );
 
   /// Manager class for managing the state of the editor.
-  late final StateManager stateManager = StateManager(
-    activeBackgroundImage: widget.editorImage,
-    onStateHistoryChange: () =>
-        mainEditorCallbacks?.onStateHistoryChange?.call(stateManager, this),
-  );
+  final StateManager stateManager = StateManager();
 
   late final _stateHistoryService = MainEditorStateHistoryService(
     sizesManager: sizesManager,
@@ -446,17 +398,14 @@ class ProImageEditorState extends State<ProImageEditor>
   /// Controller instances for managing various aspects of the main editor.
   late final MainEditorControllers _controllers;
 
-  late final _layerDragSelectionService = LayerDragSelectionService(
-    layerInteractionManager: layerInteractionManager,
-    activeLayers: () => activeLayers,
-    bodySize: () => sizesManager.bodySize,
-    configs: configs,
-    onUpdateLayers: () => _controllers.uiLayerCtrl.add(null),
-    interactiveViewer: () => interactiveViewer.currentState,
-  );
-
   /// The current theme used by the image editor.
   late ThemeData _theme;
+
+  /// Temporary layer used during editing.
+  Layer? _tempLayer;
+
+  /// Index of the selected layer.
+  int selectedLayerIndex = -1;
 
   /// Flag indicating if the editor has been initialized.
   bool _isInitialized = false;
@@ -495,28 +444,11 @@ class ProImageEditorState extends State<ProImageEditor>
 
   bool _isVideoPlayerReady = true;
 
-  /// Whether a layer is currently being transformed
-  /// (e.g., moved, scaled, or rotated).
-  bool isLayerBeingTransformed = false;
-
-  /// Returns `true` if one or more layers are currently selected.
-  bool get hasSelectedLayers => layerInteractionManager.hasSelectedLayers;
-
-  /// Returns the most recently selected layer, or `null` if no layer is
-  /// selected.
-  Layer? get selectedLayer => hasSelectedLayers
-      ? activeLayers.lastWhere(
-          (layer) =>
-              layerInteractionManager.selectedLayerIds.contains(layer.id),
-        )
-      : null;
-
-  /// Returns a list of all currently selected layers.
-  List<Layer> get selectedLayers => activeLayers
-      .where(
-        (layer) => layerInteractionManager.selectedLayerIds.contains(layer.id),
-      )
-      .toList();
+  /// Getter for the active layer currently being edited.
+  Layer? get _activeLayer =>
+      activeLayers.length > selectedLayerIndex && selectedLayerIndex >= 0
+          ? activeLayers[selectedLayerIndex]
+          : null;
 
   /// Get the list of layers from the current image editor changes.
   List<Layer> get activeLayers => stateManager.activeLayers;
@@ -533,20 +465,8 @@ class ProImageEditorState extends State<ProImageEditor>
   /// Indicates whether video editor is enabled.
   late final bool _isVideoEditor = widget.videoController != null;
 
-  /// Determines whether multi-select mode is always enabled.
-  ///
-  /// If set to `true`, multi-select mode will be active without requiring
-  /// the user to hold down CTRL/ SHIFT keys or long-press. This allows
-  /// for easier selection of multiple items.
-  bool get enableMultiSelectMode => _enableMultiSelectMode;
-  bool _enableMultiSelectMode = false;
-  set enableMultiSelectMode(bool value) {
-    _enableMultiSelectMode = value;
-    setState(() {});
-  }
-
   /// Get the current background image.
-  EditorImage? get editorImage => stateManager.activeBackgroundImage;
+  late EditorImage? editorImage = widget.editorImage;
 
   /// A [Completer] used to track the completion of a page open operation.
   ///
@@ -559,9 +479,6 @@ class ProImageEditorState extends State<ProImageEditor>
   /// The completer is initialized and can be used to await the image
   /// decoding operation.
   final Completer<bool> _decodeImageCompleter = Completer();
-
-  PointerEvent? _lastDownEvent;
-  DateTime _tapDownTimestamp = DateTime.now();
 
   @override
   void initState() {
@@ -578,9 +495,8 @@ class ProImageEditorState extends State<ProImageEditor>
       setState: setState,
     );
     sizesManager = SizesManager(configs: configs, context: context);
-    layerInteractionManager.scaleDebounce = Debounce(
-      const Duration(milliseconds: 100),
-    );
+    layerInteractionManager.scaleDebounce =
+        Debounce(const Duration(milliseconds: 100));
 
     /// For the case the user add transformConfigs we initialize the editor with
     /// this configurations and not the empty history
@@ -589,9 +505,7 @@ class ProImageEditorState extends State<ProImageEditor>
     } else {
       stateManager.addHistory(
         EditorStateHistory(
-          transformConfigs: TransformConfigs.empty().copyWith(
-            cropMode: cropRotateEditorConfigs.initialCropMode,
-          ),
+          transformConfigs: TransformConfigs.empty(),
           blur: 0,
           layers: [],
           filters: [],
@@ -617,11 +531,9 @@ class ProImageEditorState extends State<ProImageEditor>
     _rebuildController.close();
     _controllers.dispose();
     layerInteractionManager.scaleDebounce.dispose();
-    SystemChrome.setSystemUIOverlayStyle(
-      _theme.brightness == Brightness.dark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
-    );
+    SystemChrome.setSystemUIOverlayStyle(_theme.brightness == Brightness.dark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark);
     SystemChrome.restoreSystemUIOverlays();
     ServicesBinding.instance.keyboard.removeHandler(_onKeyEvent);
     if (kIsWeb && _browserContextMenuBeforeEnabled) {
@@ -637,15 +549,16 @@ class ProImageEditorState extends State<ProImageEditor>
   }
 
   void _checkInteractiveViewer() {
-    if (mainEditorConfigs.canZoomWhenLayerSelected) return;
-    interactiveViewer.currentState?.setEnableInteraction(!hasSelectedLayers);
+    interactiveViewer.currentState?.setEnableInteraction(
+      selectedLayerIndex < 0 && layerInteractionManager.selectedLayerId.isEmpty,
+    );
   }
 
   /// Handle keyboard events
   bool _onKeyEvent(KeyEvent event) {
     return _desktopInteractionManager.onKey(
       event,
-      selectedLayers: selectedLayers,
+      activeLayer: _activeLayer,
       onEscape: () {
         if (!_isDialogOpen && !_isContextMenuOpen) {
           if (isSubEditorOpen) {
@@ -736,9 +649,8 @@ class ProImageEditorState extends State<ProImageEditor>
         stateManager.heroScreenshotRequired = true;
       }
     } else {
-      _controllers.screenshot.addEmptyScreenshot(
-        screenshots: stateManager.screenshots,
-      );
+      _controllers.screenshot
+          .addEmptyScreenshot(screenshots: stateManager.screenshots);
     }
   }
 
@@ -765,11 +677,13 @@ class ProImageEditorState extends State<ProImageEditor>
   /// ```dart
   /// replaceLayer(index: 2, layer: newLayer);
   /// ```
-  void replaceLayer({required int index, required Layer layer}) {
-    layerInteractionManager.clearSelectedLayers();
-
+  void replaceLayer({
+    required int index,
+    required Layer layer,
+  }) {
+    layerInteractionManager.selectedLayerId = '';
     addHistory(
-      layers: _layerCopyManager.copyLayerList(activeLayers)
+      layers: [...activeLayers]
         ..removeAt(index)
         ..insert(index, layer),
     );
@@ -787,72 +701,24 @@ class ProImageEditorState extends State<ProImageEditor>
     bool blockSelectLayer = false,
     bool blockCaptureScreenshot = false,
   }) {
-    void correctOffset() {
-      Offset fractionalOffset = const Offset(-0.5, -0.5);
-      if (layer.isTextLayer) {
-        fractionalOffset = textEditorConfigs.layerFractionalOffset;
-      } else if (layer.isEmojiLayer) {
-        fractionalOffset = emojiEditorConfigs.layerFractionalOffset;
-      } else if (layer.isPaintLayer) {
-        fractionalOffset = paintEditorConfigs.layerFractionalOffset;
-      } else if (layer.isWidgetLayer) {
-        fractionalOffset = stickerEditorConfigs.layerFractionalOffset;
-      }
-
-      if (fractionalOffset != const Offset(-0.5, -0.5)) {
-        final overlayPadding = layerInteraction.style.overlayPadding;
-        double dxCorrected = 0;
-        double dyCorrected = 0;
-
-        if (fractionalOffset.dx == 0) {
-          dxCorrected = -overlayPadding.left;
-        } else if (fractionalOffset.dx == 1) {
-          dxCorrected = overlayPadding.right;
-        }
-        if (fractionalOffset.dy == 0) {
-          dyCorrected = -overlayPadding.top;
-        } else if (fractionalOffset.dy == 1) {
-          dyCorrected = overlayPadding.bottom;
-        }
-
-        layer.offset += Offset(dxCorrected, dyCorrected);
-      }
-    }
-
-    correctOffset();
-
-    final viewer = interactiveViewer.currentState;
-    if (viewer != null) {
-      final scaleDelta = viewer.scaleFactor;
-
-      if (autoCorrectZoomScale) {
-        layer.scale /= scaleDelta;
-      }
-      if (autoCorrectZoomOffset) {
-        final bodySize = sizesManager.bodySize;
-
-        final scaledSize = bodySize * scaleDelta;
-
-        final zoomOffset = Offset(
-              scaledSize.width - bodySize.width,
-              scaledSize.height - bodySize.height,
-            ) /
-            2;
-
-        layer.offset -= (viewer.offset + zoomOffset) / viewer.scaleFactor;
-      }
-    }
+    layerInteractionManager.selectedLayerId = '';
 
     addHistory(newLayer: layer, blockCaptureScreenshot: blockCaptureScreenshot);
 
     if (removeLayerIndex >= 0) {
       activeLayers.removeAt(removeLayerIndex);
     }
-    if (!blockSelectLayer && layer.interaction.enableSelection) {
-      layerInteractionManager.addSelectedLayer(layer.id);
+    if (!blockSelectLayer &&
+        layerInteractionManager.layersAreSelectable(configs) &&
+        layerInteraction.initialSelected) {
+      /// Skip one frame to ensure captured image in separate thread will not
+      /// capture the border.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        layerInteractionManager.selectedLayerId = layer.id;
+        _controllers.uiLayerCtrl.add(null);
+        _checkInteractiveViewer();
+      });
     }
-    _checkInteractiveViewer();
-
     mainEditorCallbacks?.handleAddLayer(layer);
     setState(() {});
   }
@@ -860,17 +726,21 @@ class ProImageEditorState extends State<ProImageEditor>
   /// Remove a layer from the editor.
   ///
   /// This method removes a layer from the editor and updates the editing state.
-  void removeLayer(Layer layer, {bool blockCaptureScreenshot = false}) {
-    int layerPos = activeLayers.indexOf(layer);
-    if (layerPos < 0) return;
+  void removeLayer(Layer? layer) {
+    int layerPos = activeLayers
+        .indexWhere((element) => element.id == (layer?.id ?? _tempLayer!.id));
+    if (layerPos >= 0) {
+      stateManager.activeLayers[layerPos] =
+          _layerCopyManager.copyLayer(_tempLayer ?? layer!);
 
-    mainEditorCallbacks?.handleRemoveLayer(layer);
+      mainEditorCallbacks
+          ?.handleRemoveLayer(stateManager.activeLayers[layerPos]);
 
-    var layers = _layerCopyManager.copyLayerList(activeLayers)
-      ..removeAt(layerPos);
-
-    addHistory(layers: layers, blockCaptureScreenshot: blockCaptureScreenshot);
-    setState(() {});
+      var layers = _layerCopyManager.copyLayerList(activeLayers)
+        ..removeAt(layerPos);
+      addHistory(layers: layers);
+      setState(() {});
+    }
   }
 
   /// Remove all layers from the editor.
@@ -882,10 +752,57 @@ class ProImageEditorState extends State<ProImageEditor>
     setState(() {});
   }
 
+  /// Update the temporary layer in the editor.
+  ///
+  /// This method updates the temporary layer in the editor and updates the
+  /// editing state.
+  void _updateTempLayer() {
+    addHistory();
+    layerInteractionManager.selectedLayerId = '';
+    _checkInteractiveViewer();
+    _controllers.uiLayerCtrl.add(null);
+
+    /*
+    String selectedLayerId = _layerInteractionManager.selectedLayerId;
+    _layerInteractionManager.selectedLayerId = '';
+    setState(() {});
+    takeScreenshot();
+    if (selectedLayerId.isNotEmpty) {
+      /// Skip one frame to ensure captured image in separate thread will not
+      /// capture the border.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        _layerInteractionManager.selectedLayerId = selectedLayerId;
+        setState(() {});
+      });
+    } */
+
+    List<Layer> oldLayers =
+        stateHistory[stateManager.historyPointer - 1].layers;
+    int oldIndex =
+        oldLayers.indexWhere((element) => element.id == _tempLayer!.id);
+    if (oldIndex >= 0) {
+      oldLayers[oldIndex] = _layerCopyManager.copyLayer(_tempLayer!);
+    }
+    _tempLayer = null;
+  }
+
   void _initializeVideoEditor() async {
     if (!_isVideoEditor) return;
 
     _isVideoPlayerReady = false;
+    Future<Uint8List> createTransparentImage(
+        double width, double height) async {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
+      final paint = Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0);
+      canvas.drawRect(Rect.fromLTWH(0.0, 0.0, width, height), paint);
+
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(width.toInt(), height.toInt());
+      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+
+      return pngBytes!.buffer.asUint8List();
+    }
 
     widget.videoController!.initialize(
       configsFunction: () => configs.videoEditor,
@@ -894,8 +811,11 @@ class ProImageEditorState extends State<ProImageEditor>
     );
 
     final resolution = widget.videoController!.initialResolution;
-    stateManager.activeBackgroundImage = EditorImage(
-      byteArray: await createTransparentImage(resolution),
+    editorImage = EditorImage(
+      byteArray: await createTransparentImage(
+        resolution.width,
+        resolution.height,
+      ),
     );
     _isVideoPlayerReady = true;
 
@@ -922,7 +842,10 @@ class ProImageEditorState extends State<ProImageEditor>
     /// Set the decoded image infos for the case they are not empty
     if (transformSetup.imageInfos != null) {
       _imageInfos = transformSetup.imageInfos!;
-      decodeImage(transformSetup.transformConfigs, transformSetup.imageInfos);
+      decodeImage(
+        transformSetup.transformConfigs,
+        transformSetup.imageInfos,
+      );
     }
   }
 
@@ -934,17 +857,6 @@ class ProImageEditorState extends State<ProImageEditor>
     TransformConfigs? transformConfigs,
     ImageInfos? imageInfos,
   ]) async {
-    if (widget.blankSize != null) {
-      final blankSize = widget.blankSize!;
-      imageInfos ??= ImageInfos(
-        rawSize: blankSize,
-        renderedSize: blankSize,
-        originalRenderedSize: blankSize,
-        cropRectSize: blankSize,
-        pixelRatio: blankSize.width / sizesManager.editorSize.width,
-        isRotated: false,
-      );
-    }
     if (!_isVideoPlayerReady && _isVideoEditor) {
       var initSize = widget.videoController!.initialResolution;
       _imageInfos = ImageInfos(
@@ -955,35 +867,11 @@ class ProImageEditorState extends State<ProImageEditor>
         pixelRatio: initSize.width / sizesManager.editorSize.width,
         isRotated: false,
       );
-
       sizesManager.originalImageSize ??= _imageInfos!.rawSize;
       sizesManager.decodedImageSize = _imageInfos!.renderedSize;
-
-      bool shouldImportHistory =
-          stateHistoryConfigs.initStateHistory != null && !_isInitialized;
       _isInitialized = true;
       _isImageNotDecoded = false;
       if (mounted) setState(() {});
-
-      if (shouldImportHistory) {
-        bool showLoadingDialog = i18n.importStateHistoryMsg.isNotEmpty;
-
-        if (showLoadingDialog) {
-          LoadingDialog.instance.show(
-            context,
-            theme: _theme,
-            configs: configs,
-            message: i18n.importStateHistoryMsg,
-          );
-        }
-        await importStateHistory(stateHistoryConfigs.initStateHistory!);
-        if (showLoadingDialog) {
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            LoadingDialog.instance.hide();
-          });
-        }
-      }
-
       return;
     }
 
@@ -1029,6 +917,11 @@ class ProImageEditorState extends State<ProImageEditor>
     mainEditorCallbacks?.handleUpdateUI();
   }
 
+  /// Set the temporary layer to a copy of the provided layer.
+  void _setTempLayer(Layer layer) {
+    _tempLayer = _layerCopyManager.copyLayer(layer);
+  }
+
   void _calcAppBarHeight() {
     double? renderedBottomBarHeight =
         _bottomBarKey.currentContext?.size?.height;
@@ -1041,51 +934,44 @@ class ProImageEditorState extends State<ProImageEditor>
     }
   }
 
-  /// Updates the background image in the editor.
+  /// Replace the background image with a new image and ensures all relevant
+  /// states are rebuilt to reflect the new background. This includes marking
+  /// all background screenshots as "broken" to trigger re-capture with the
+  /// new image, and rebuilding the current editor state to apply the changes.
   ///
-  /// If [updateHistory] is `false`, marks all background-captured images that
-  /// use the old-background image as "broken" so they will be recaptured with
-  /// the new image, and set the active background image to [image].
-  ///
-  /// If [updateHistory] is `true`, updates the background images in the
-  /// state manager, replaces the old image with [image], and adds the change
-  /// to the history.
-  ///
-  /// After updating, decodes the new image asynchronously.
-  ///
-  /// [image]: The new background image to set.
-  /// [updateHistory]: Whether to update the history with this change
-  /// (default is `true`).
-  Future<void> updateBackgroundImage(
-    EditorImage image, {
-    bool updateHistory = true,
-  }) async {
-    if (!updateHistory) {
-      /// Mark all background-captured images that use the old background
-      /// image as "broken" so the editor captures them again with the new
-      /// image.
-      for (var item in stateManager.screenshots) {
-        item.broken = true;
-      }
-      stateManager.activeBackgroundImage = image;
+  /// The method performs the following steps:
+  /// 1. Updates the editor's background image.
+  /// 2. Decodes the new image to prepare it for rendering.
+  /// 3. Marks all screenshots as "broken" so they are recaptured with the
+  /// updated background.
+  /// 4. Rebuilds the current editor state to ensure the new background is
+  /// applied.
+  Future<void> updateBackgroundImage(EditorImage image) async {
+    editorImage = image;
+    await decodeImage();
 
-      await decodeImage();
-      _rebuildController.add(null);
-    } else {
-      addHistory();
-
-      /// Ensure the screenshot is already added to the task list.
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          stateManager.updateBackgroundImages(
-            oldImage: editorImage ?? widget.editorImage!,
-            newImage: image,
-          );
-          await decodeImage();
-          _rebuildController.add(null);
-        });
-      });
+    /// Mark all background captured images with the old background image as
+    /// "broken" that the editor capture them with the new image again
+    for (var item in stateManager.screenshots) {
+      item.broken = true;
     }
+
+    /// Force to rebuild everything
+    int pos = stateManager.historyPointer;
+    EditorStateHistory oldHistory = stateManager.stateHistory[pos];
+
+    stateManager.stateHistory[pos] = EditorStateHistory(
+      layers: oldHistory.layers,
+      transformConfigs: oldHistory.transformConfigs,
+      blur: oldHistory.blur,
+      filters: [...oldHistory.filters],
+      tuneAdjustments: [...oldHistory.tuneAdjustments],
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _backgroundImageColorFilterKey.currentState?.refresh();
+      }
+    });
   }
 
   @override
@@ -1099,59 +985,33 @@ class ProImageEditorState extends State<ProImageEditor>
   /// This method is called when a scaling operation begins and initializes the
   /// necessary variables.
   void _onScaleStart(ScaleStartDetails details) {
-    final int pointerCount = details.pointerCount;
     if (sizesManager.bodySize != sizesManager.editorSize) {
       _calcAppBarHeight();
     }
 
-    if (!isDesktop) {
-      if (pointerCount >= 2) {
-        /// On mobile devices, multi-finger gestures should trigger zoom or
-        /// pan when layer-pinch-interactions are disabled.
-        if (mainEditorConfigs.enableZoom &&
-            !layerInteraction.enableMobilePinchRotate &&
-            !layerInteraction.enableMobilePinchScale) {
-          interactiveViewer.currentState?.onScaleStart(details);
-          return;
-        }
-      } else {
-        /// Handle drag selection for mobile single-finger gestures.
-        if (_mouseService.validateDragAction() &&
-            mainEditorConfigs.mobilePanInteraction ==
-                MobilePanInteraction.dragSelect &&
-            layerInteractionManager.activeInteractionLayer == null) {
-          layerInteractionManager.clearSelectedLayers();
-          _layerDragSelectionService.startDragging(details.localFocalPoint);
-          return;
-        }
-      }
+    layerInteractionManager
+      ..snapStartPosX = details.focalPoint.dx
+      ..snapStartPosY = details.focalPoint.dy;
+
+    if (selectedLayerIndex < 0) return;
+
+    var layer = activeLayers[selectedLayerIndex];
+
+    if (layerInteractionManager.selectedLayerId != layer.id) {
+      layerInteractionManager.selectedLayerId = '';
+      _checkInteractiveViewer();
     }
 
-    /// Handle pan action
-    if (_mouseService.validatePanAction()) {
-      interactiveViewer.currentState?.onScaleStart(details);
-      return;
-    }
+    _setTempLayer(layer);
+    layerInteractionManager
+      ..baseScaleFactor = layer.scale
+      ..baseAngleFactor = layer.rotation
+      ..snapStartRotation = layer.rotation * 180 / pi
+      ..snapLastRotation = layerInteractionManager.snapStartRotation
+      ..reset();
 
-    /// Handle drag selection for desktop or fallback
-    if (_mouseService.validateDragAction() &&
-        layerInteractionManager.activeInteractionLayer == null) {
-      layerInteractionManager.clearSelectedLayers();
-      _layerDragSelectionService.startDragging(details.localFocalPoint);
-      return;
-    }
-
-    /// We add a new history entry that will be updated live during layer
-    /// interaction.
-    /// Important: No screenshot is taken at this point; it will be captured
-    /// after the layer interaction is completed.
-    if (hasSelectedLayers) addHistory(blockCaptureScreenshot: true);
-    _checkInteractiveViewer();
-    isLayerBeingTransformed = hasSelectedLayers;
-    layerInteractionManager.onScaleStart(
-      details: details,
-      selectedLayers: selectedLayers,
-    );
+    double posX = layer.offset.dx;
+    double posY = layer.offset.dy;
 
     layerInteractionManager
       ..lastPositionY = posY <= -layerInteractionManager.hitSpan
@@ -1173,41 +1033,8 @@ class ProImageEditorState extends State<ProImageEditor>
   /// This method is called during a scaling operation and updates the selected
   /// layer's position and properties.
   void _onScaleUpdate(ScaleUpdateDetails details) {
-    final int pointerCount = details.pointerCount;
-
     mainEditorCallbacks?.handleScaleUpdate(details);
-    if (blockOnScaleUpdateFunction) return;
-
-    if (!isDesktop) {
-      if (pointerCount >= 2) {
-        /// On mobile, multi-finger gestures should always trigger zoom/pan
-        if (mainEditorConfigs.enableZoom &&
-            !layerInteraction.enableMobilePinchRotate &&
-            !layerInteraction.enableMobilePinchScale) {
-          interactiveViewer.currentState?.onScaleUpdate(details);
-          return;
-        }
-      } else {
-        /// Handle active drag selection on mobile
-        if (_layerDragSelectionService.isActive) {
-          _layerDragSelectionService.updateSize(details.localFocalPoint);
-          return;
-        }
-      }
-    }
-
-    /// Handle pan action
-    if (_mouseService.validatePanAction()) {
-      interactiveViewer.currentState?.onScaleUpdate(details);
-      return;
-    }
-
-    /// Handle drag selection updates
-    if (_layerDragSelectionService.isActive &&
-        _mouseService.validateDragAction()) {
-      _layerDragSelectionService.updateSize(details.localFocalPoint);
-      return;
-    }
+    if (selectedLayerIndex < 0 || blockOnScaleUpdateFunction) return;
 
     bool beforeShowHorizontalHelperLine =
         layerInteractionManager.showHorizontalHelperLine;
@@ -1227,22 +1054,24 @@ class ProImageEditorState extends State<ProImageEditor>
       }
     }
 
-    if (!hasSelectedLayers) return;
+    if (_activeLayer == null) return;
 
     if (layerInteractionManager.rotateScaleLayerSizeHelper != null) {
-      layerInteractionManager.calculateInteractiveButtonScaleRotate(
-        configs: configs,
-        selectedLayers: selectedLayers,
-        details: details,
-        editorSize: sizesManager.bodySize,
-        layerTheme: layerInteraction.style,
-        editorScaleFactor: interactiveViewer.currentState?.scaleFactor ?? 1.0,
-        editorScaleOffset:
-            interactiveViewer.currentState?.offset ?? Offset.zero,
-      );
-      for (Layer layer in selectedLayers) {
-        layer.key.currentState!.setState(() {});
-      }
+      layerInteractionManager
+        ..freeStyleHighPerformanceScaling =
+            paintEditorConfigs.enableFreeStyleHighPerformanceScaling ??
+                !isDesktop
+        ..calculateInteractiveButtonScaleRotate(
+          configs: configs,
+          activeLayer: _activeLayer!,
+          details: details,
+          editorSize: sizesManager.bodySize,
+          layerTheme: layerInteraction.style,
+          editorScaleFactor: interactiveViewer.currentState?.scaleFactor ?? 1.0,
+          editorScaleOffset:
+              interactiveViewer.currentState?.offset ?? Offset.zero,
+        );
+      _activeLayer!.key.currentState!.setState(() {});
       checkUpdateHelperLineUI();
       return;
     }
@@ -1251,43 +1080,35 @@ class ProImageEditorState extends State<ProImageEditor>
         interactiveViewer.currentState?.scaleFactor ?? 1.0;
 
     layerInteractionManager.enabledHitDetection = false;
-    if (pointerCount == 1) {
-      layerInteractionManager.calculateMovement(
-        editorScaleFactor: editorScaleFactor,
-        removeAreaKey: _removeAreaKey,
-        selectedLayers: selectedLayers,
-        layerList: activeLayers,
-        context: context,
-        detail: details,
-        onHoveredRemoveChanged: (value) {
-          _controllers.removeBtnCtrl.add(null);
-          mainEditorCallbacks?.onHoverRemoveAreaChange?.call(value);
-        },
-        helperLineCtrl: _controllers.helperLineCtrl,
-      );
-    } else if (pointerCount == 2) {
-      /// If multi-selection is active and the editor is zoomable, treat
-      /// two-finger gestures as zooming the editor instead of scaling a layer.
-      final hasMultiSelection = selectedLayers.length > 1;
-
-      if (hasMultiSelection && mainEditorConfigs.enableZoom) {
-        interactiveViewer.currentState?.onScaleUpdate(details);
-        return;
-      }
-      // Layer scaling (original logic)
-      layerInteractionManager.calculateScaleRotate(
-        configs: configs,
-        selectedLayers: selectedLayers,
-        detail: details,
-        editorSize: sizesManager.bodySize,
-        screenPaddingHelper: sizesManager.imageMargin,
-        editorScaleFactor: editorScaleFactor,
-      );
+    if (details.pointerCount == 1) {
+      layerInteractionManager
+        ..freeStyleHighPerformanceMoving =
+            paintEditorConfigs.enableFreeStyleHighPerformanceMoving ??
+                isWebMobile
+        ..calculateMovement(
+          editorScaleFactor: editorScaleFactor,
+          removeAreaKey: _removeAreaKey,
+          activeLayer: _activeLayer!,
+          context: context,
+          detail: details,
+          onHoveredRemoveChanged: _controllers.removeBtnCtrl.add,
+        );
+    } else if (details.pointerCount == 2) {
+      layerInteractionManager
+        ..freeStyleHighPerformanceScaling =
+            paintEditorConfigs.enableFreeStyleHighPerformanceScaling ??
+                !isDesktop
+        ..calculateScaleRotate(
+          editorScaleFactor: editorScaleFactor,
+          configs: configs,
+          activeLayer: _activeLayer!,
+          detail: details,
+          editorSize: sizesManager.bodySize,
+          screenPaddingHelper: sizesManager.imageMargin,
+        );
     }
-    for (Layer layer in selectedLayers) {
-      mainEditorCallbacks?.handleUpdateLayer(layer);
-      layer.key.currentState?.setState(() {});
-    }
+    mainEditorCallbacks?.handleUpdateLayer(_activeLayer!);
+    _activeLayer?.key.currentState?.setState(() {});
     checkUpdateHelperLineUI();
   }
 
@@ -1297,43 +1118,12 @@ class ProImageEditorState extends State<ProImageEditor>
   /// lines and flags.
   void _onScaleEnd(ScaleEndDetails details) async {
     mainEditorCallbacks?.handleScaleEnd(details);
-    layerInteractionManager.activeInteractionLayer = null;
 
-    /// Check if layers should be removed.
-    if (layerInteractionManager.hoverRemoveBtn) {
-      for (Layer layer in layerInteractionManager.selectedLayersScaleStart) {
-        activeLayers.remove(layer);
-        mainEditorCallbacks?.handleRemoveLayer(layer);
-      }
-      layerInteractionManager.clearSelectedLayers();
+    if (!layerInteractionManager.hoverRemoveBtn && _tempLayer != null) {
+      _updateTempLayer();
     }
 
-    if (!hasSelectedLayers) {
-      if (!_layerDragSelectionService.isActive) {
-        interactiveViewer.currentState?.onScaleEnd(details);
-      }
-
-      /// On mobile when layers are not selectable we check if a layer was
-      /// transformed.
-      if (!isDesktop &&
-          layerInteractionManager.layerWasTransformed &&
-          layerInteraction.selectable != LayerInteractionSelectable.enabled) {
-        _takeScreenshot(replaceLastScreenshot: true);
-      }
-    } else {
-      /// At this point, we only create a screenshot since the new history
-      /// entry was already added in [_onScaleStart].
-      _takeScreenshot(replaceLastScreenshot: true);
-      if (!layerInteraction.keepSelectionOnInteraction) {
-        layerInteractionManager.clearSelectedLayers();
-      }
-    }
-
-    isLayerBeingTransformed = false;
-    _checkInteractiveViewer();
-    _controllers.uiLayerCtrl.add(null);
     layerInteractionManager.onScaleEnd();
-    _layerDragSelectionService.endDragging();
     setState(() {});
   }
 
@@ -1345,10 +1135,10 @@ class ProImageEditorState extends State<ProImageEditor>
   ///
   /// [layerData] - The text layer data to be edited.
   void _onTextLayerTap(TextLayer layerData) async {
-    TextLayer? updatedLayer = await openPage(
+    TextLayer? layer = await openPage(
       TextEditor(
         key: textEditor,
-        layer: _layerCopyManager.copyLayer(layerData) as TextLayer,
+        layer: layerData,
         heroTag: layerData.id,
         configs: configs,
         theme: _theme,
@@ -1362,57 +1152,33 @@ class ProImageEditorState extends State<ProImageEditor>
       duration: const Duration(milliseconds: 250),
     );
 
-    if (!mounted || updatedLayer == null) return;
-
-    updatedLayer
-      ..id = layerData.id
-      ..key = layerData.key
-      ..keyInternalSize = layerData.keyInternalSize
-      ..flipX = layerData.flipX
-      ..flipY = layerData.flipY
-      ..offset = layerData.offset
-      ..scale = layerData.scale
-      ..rotation = layerData.rotation
-      ..boxConstraints = layerData.boxConstraints
-      ..groupId = layerData.groupId
-      ..interaction = layerData.interaction
-      ..meta = layerData.meta;
-
-    if (updatedLayer.text.isEmpty) {
-      removeLayer(layerData);
-      return;
-    }
+    if (layer == null || !mounted) return;
 
     int i = activeLayers.indexWhere((element) => element.id == layerData.id);
-    replaceLayer(index: i, layer: updatedLayer);
-  }
+    if (i >= 0) {
+      _setTempLayer(layerData);
+      (activeLayers[i] as TextLayer)
+        ..text = layer.text
+        ..background = layer.background
+        ..color = layer.color
+        ..colorMode = layer.colorMode
+        ..colorPickerPosition = layer.colorPickerPosition
+        ..align = layer.align
+        ..fontScale = layer.fontScale
+        ..textStyle = layer.textStyle
+        ..id = layerData.id
+        ..flipX = layerData.flipX
+        ..flipY = layerData.flipY
+        ..offset = layerData.offset
+        ..scale = layerData.scale
+        ..customSecondaryColor = layer.customSecondaryColor
+        ..rotation = layerData.rotation;
 
-  void _editPaintLayer(PaintLayer layer) async {
-    if (layer.isPaintLayer && layer.item.isCensorArea) return;
+      _updateTempLayer();
+    }
 
-    PaintLayer? result =
-        await (callbacks.paintEditorCallbacks?.onEditLayer?.call(layer) ??
-            showModalBottomSheet<PaintLayer>(
-              context: context,
-              backgroundColor:
-                  paintEditorConfigs.style.editSheetBackgroundColor,
-              showDragHandle: paintEditorConfigs.style.editSheetShowDragHandle,
-              isScrollControlled: true,
-              useSafeArea: true,
-              builder: (context) =>
-                  paintEditorConfigs.widgets.editBottomSheet?.call(layer) ??
-                  SafeArea(
-                    child: PaintEditorLayerEditor(
-                      layer: _layerCopyManager.duplicateLayer(layer,
-                          offset: Offset.zero) as PaintLayer,
-                      configs: configs,
-                    ),
-                  ),
-            ));
-
-    if (result == null) return;
-
-    replaceLayer(index: getLayerStackIndex(layer), layer: result);
+    setState(() {});
+    mainEditorCallbacks?.handleUpdateUI();
   }
 
   /// Initializes the key event listener by adding a handler to the keyboard
@@ -1427,13 +1193,19 @@ class ProImageEditorState extends State<ProImageEditor>
     ServicesBinding.instance.keyboard.removeHandler(_onKeyEvent);
   }
 
-  void _selectLayerAfterHeroIsDone(String id) async {
+  void _selectLayerAfterHeroIsDone(String id) {
     if (layerInteractionManager.layersAreSelectable(configs) &&
         layerInteraction.initialSelected) {
-      if (isSubEditorOpen) await _pageOpenCompleter.future;
-      layerInteractionManager.addSelectedLayer(id);
-      _checkInteractiveViewer();
-      _controllers.uiLayerCtrl.add(null);
+      /// Skip one frame to ensure captured image in separate thread will not
+      /// capture the border.
+      Future.delayed(const Duration(milliseconds: 1), () async {
+        if (isSubEditorOpen) await _pageOpenCompleter.future;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          layerInteractionManager.selectedLayerId = id;
+          _checkInteractiveViewer();
+          setState(() {});
+        });
+      });
     }
   }
 
@@ -1444,9 +1216,13 @@ class ProImageEditorState extends State<ProImageEditor>
     Widget page, {
     Duration duration = const Duration(milliseconds: 300),
   }) {
-    layerInteractionManager.clearSelectedLayers();
+    layerInteractionManager.selectedLayerId = '';
     _checkInteractiveViewer();
     isSubEditorOpen = true;
+
+    if (paintEditorConfigs.enableFreeStyleHighPerformanceHero) {
+      layerInteractionManager.freeStyleHighPerformanceHero = true;
+    }
 
     setState(() {});
 
@@ -1470,20 +1246,23 @@ class ProImageEditorState extends State<ProImageEditor>
 
     mainEditorCallbacks?.handleOpenSubEditor(editorName);
     _pageOpenCompleter = Completer();
-
-    final subEditorStyle = mainEditorConfigs.style.subEditorPage;
     return Navigator.push<T?>(
       context,
       PageRouteBuilder(
         opaque: false,
-        barrierColor: subEditorStyle.barrierColor,
-        barrierDismissible: subEditorStyle.barrierDismissible,
+        barrierColor: mainEditorConfigs.style.subEditorPage.barrierColor,
+        barrierDismissible:
+            mainEditorConfigs.style.subEditorPage.barrierDismissible,
         transitionDuration: duration,
         reverseTransitionDuration: duration,
-        transitionsBuilder: subEditorStyle.transitionsBuilder ??
-            (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+        transitionsBuilder:
+            mainEditorConfigs.style.subEditorPage.transitionsBuilder ??
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
         pageBuilder: (context, animation, secondaryAnimation) {
           void animationStatusListener(AnimationStatus status) {
             switch (status) {
@@ -1499,6 +1278,7 @@ class ProImageEditorState extends State<ProImageEditor>
                   if (!_pageOpenCompleter.isCompleted) {
                     _pageOpenCompleter.complete(true);
                   }
+                  layerInteractionManager.freeStyleHighPerformanceHero = false;
 
                   if (stateManager.heroScreenshotRequired) {
                     stateManager.heroScreenshotRequired = false;
@@ -1520,37 +1300,42 @@ class ProImageEditorState extends State<ProImageEditor>
           }
 
           animation.addStatusListener(animationStatusListener);
-
-          if (!subEditorStyle.requireReposition) return page;
-
-          return SafeArea(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  top: subEditorStyle.positionTop,
-                  left: subEditorStyle.positionLeft,
-                  right: subEditorStyle.positionRight,
-                  bottom: subEditorStyle.positionBottom,
-                  child: Center(
-                    child: Container(
-                      width: subEditorStyle.enforceSizeFromMainEditor
-                          ? sizesManager.editorSize.width
-                          : null,
-                      height: subEditorStyle.enforceSizeFromMainEditor
-                          ? sizesManager.editorSize.height
-                          : null,
-                      clipBehavior: Clip.hardEdge,
-                      decoration: BoxDecoration(
-                        borderRadius: subEditorStyle.borderRadius,
+          if (mainEditorConfigs.style.subEditorPage.requireReposition) {
+            return SafeArea(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned(
+                    top: mainEditorConfigs.style.subEditorPage.positionTop,
+                    left: mainEditorConfigs.style.subEditorPage.positionLeft,
+                    right: mainEditorConfigs.style.subEditorPage.positionRight,
+                    bottom:
+                        mainEditorConfigs.style.subEditorPage.positionBottom,
+                    child: Center(
+                      child: Container(
+                        width: mainEditorConfigs
+                                .style.subEditorPage.enforceSizeFromMainEditor
+                            ? sizesManager.editorSize.width
+                            : null,
+                        height: mainEditorConfigs
+                                .style.subEditorPage.enforceSizeFromMainEditor
+                            ? sizesManager.editorSize.height
+                            : null,
+                        clipBehavior: Clip.hardEdge,
+                        decoration: BoxDecoration(
+                          borderRadius: mainEditorConfigs
+                              .style.subEditorPage.borderRadius,
+                        ),
+                        child: page,
                       ),
-                      child: page,
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
+                ],
+              ),
+            );
+          } else {
+            return page;
+          }
         },
       ),
     );
@@ -1577,22 +1362,15 @@ class ProImageEditorState extends State<ProImageEditor>
     List<PaintLayer>? paintItemLayers = await openPage<List<PaintLayer>>(
       PaintEditor.autoSource(
         key: paintEditor,
-        editorImage: widget.blankSize == null
-            ? editorImage
-            : EditorImage(byteArray: kImageEditorTransparentBytes),
+        editorImage: editorImage,
         videoController: widget.videoController,
         initConfigs: PaintEditorInitConfigs(
           configs: configs,
-          callbacks: callbacks.copyWith(
-            paintEditorCallbacks: overridenPaintCallbacks,
-          ),
-          layers: _layerCopyManager.duplicateLayerList(
-            activeLayers,
-            offset: Offset.zero,
-            enableCopyId: true,
-          ),
+          callbacks:
+              callbacks.copyWith(paintEditorCallbacks: overridenPaintCallbacks),
+          layers: activeLayers,
           theme: _theme,
-          mainImageSize: widget.blankSize ?? sizesManager.decodedImageSize,
+          mainImageSize: sizesManager.decodedImageSize,
           mainBodySize: sizesManager.bodySize,
           transformConfigs: stateManager.transformConfigs,
           appliedBlurFactor: stateManager.activeBlur,
@@ -1614,36 +1392,9 @@ class ProImageEditorState extends State<ProImageEditor>
 
       _selectLayerAfterHeroIsDone(paintItemLayers.last.id);
 
-    String lastLayerId = '';
-    for (var i = 0; i < result.layers.length; i++) {
-      final layer = result.layers[i];
-      final oldIndex = activeLayers.indexWhere((el) => el.id == layer.id);
-
-      final duplicatedLayer = _layerCopyManager.duplicateLayer(
-        layer,
-        offset: Offset.zero,
-      );
-      lastLayerId = duplicatedLayer.id;
-      addLayer(
-        duplicatedLayer,
-        removeLayerIndex: oldIndex,
-        blockSelectLayer: true,
-        blockCaptureScreenshot: true,
-        autoCorrectZoomOffset: false,
-        autoCorrectZoomScale: false,
-      );
+      setState(() {});
+      mainEditorCallbacks?.handleUpdateUI();
     }
-    for (Layer layer in result.removedLayers) {
-      removeLayer(layer, blockCaptureScreenshot: true);
-    }
-
-    if (lastLayerId.isNotEmpty) {
-      _selectLayerAfterHeroIsDone(lastLayerId);
-    }
-
-    _takeScreenshot(replaceLastScreenshot: true);
-    setState(() {});
-    mainEditorCallbacks?.handleUpdateUI();
   }
 
   /// Opens the text editor.
@@ -1686,9 +1437,7 @@ class ProImageEditorState extends State<ProImageEditor>
     await openPage<TransformConfigs?>(
       CropRotateEditor.autoSource(
         key: cropRotateEditor,
-        editorImage: widget.blankSize == null
-            ? editorImage
-            : EditorImage(byteArray: kImageEditorTransparentBytes),
+        editorImage: editorImage,
         videoController: widget.videoController,
         initConfigs: CropRotateEditorInitConfigs(
           configs: configs,
@@ -1696,7 +1445,7 @@ class ProImageEditorState extends State<ProImageEditor>
           theme: _theme,
           layers: stateManager.activeLayers,
           transformConfigs: stateManager.transformConfigs,
-          mainImageSize: widget.blankSize ?? sizesManager.decodedImageSize,
+          mainImageSize: sizesManager.decodedImageSize,
           mainBodySize: sizesManager.bodySize,
           enableFakeHero: true,
           appliedBlurFactor: stateManager.activeBlur,
@@ -1747,24 +1496,24 @@ class ProImageEditorState extends State<ProImageEditor>
   /// If tune adjustments are made, they are added to the editor's history
   /// and the UI is updated accordingly. If the operation is canceled or no
   /// adjustments are made, the current state remains unchanged.
-  void openTuneEditor({bool enableHero = true}) async {
+  void openTuneEditor({
+    bool enableHero = true,
+  }) async {
     if (!mounted) return;
     List<TuneAdjustmentMatrix>? tuneAdjustments = await openPage(
       HeroMode(
         enabled: enableHero,
         child: TuneEditor.autoSource(
           key: tuneEditor,
-          editorImage: widget.blankSize == null
-              ? editorImage
-              : EditorImage(byteArray: kImageEditorTransparentBytes),
+          editorImage: editorImage,
           videoController: widget.videoController,
           initConfigs: TuneEditorInitConfigs(
             theme: _theme,
             configs: configs,
             callbacks: callbacks,
             transformConfigs: stateManager.transformConfigs,
-            layers: _layerCopyManager.copyLayerList(activeLayers),
-            mainImageSize: widget.blankSize ?? sizesManager.decodedImageSize,
+            layers: activeLayers,
+            mainImageSize: sizesManager.decodedImageSize,
             mainBodySize: sizesManager.bodySize,
             convertToUint8List: false,
             appliedBlurFactor: stateManager.activeBlur,
@@ -1777,7 +1526,10 @@ class ProImageEditorState extends State<ProImageEditor>
 
     if (tuneAdjustments == null) return;
 
-    addHistory(tuneAdjustments: tuneAdjustments, heroScreenshotRequired: true);
+    addHistory(
+      tuneAdjustments: tuneAdjustments,
+      heroScreenshotRequired: true,
+    );
 
     setState(() {});
     mainEditorCallbacks?.handleUpdateUI();
@@ -1798,17 +1550,15 @@ class ProImageEditorState extends State<ProImageEditor>
     FilterMatrix? filters = await openPage(
       FilterEditor.autoSource(
         key: filterEditor,
-        editorImage: widget.blankSize == null
-            ? editorImage
-            : EditorImage(byteArray: kImageEditorTransparentBytes),
+        editorImage: editorImage,
         videoController: widget.videoController,
         initConfigs: FilterEditorInitConfigs(
           theme: _theme,
           configs: configs,
           callbacks: callbacks,
           transformConfigs: stateManager.transformConfigs,
-          layers: _layerCopyManager.copyLayerList(activeLayers),
-          mainImageSize: widget.blankSize ?? sizesManager.decodedImageSize,
+          layers: activeLayers,
+          mainImageSize: sizesManager.decodedImageSize,
           mainBodySize: sizesManager.bodySize,
           convertToUint8List: false,
           appliedBlurFactor: stateManager.activeBlur,
@@ -1820,7 +1570,10 @@ class ProImageEditorState extends State<ProImageEditor>
 
     if (filters == null) return;
 
-    addHistory(filters: filters, heroScreenshotRequired: true);
+    addHistory(
+      filters: filters,
+      heroScreenshotRequired: true,
+    );
 
     setState(() {});
     mainEditorCallbacks?.handleUpdateUI();
@@ -1832,13 +1585,11 @@ class ProImageEditorState extends State<ProImageEditor>
     double? blur = await openPage(
       BlurEditor.autoSource(
         key: blurEditor,
-        editorImage: widget.blankSize == null
-            ? editorImage
-            : EditorImage(byteArray: kImageEditorTransparentBytes),
+        editorImage: editorImage,
         videoController: widget.videoController,
         initConfigs: BlurEditorInitConfigs(
           theme: _theme,
-          mainImageSize: widget.blankSize ?? sizesManager.decodedImageSize,
+          mainImageSize: sizesManager.decodedImageSize,
           mainBodySize: sizesManager.bodySize,
           layers: activeLayers,
           configs: configs,
@@ -1854,7 +1605,10 @@ class ProImageEditorState extends State<ProImageEditor>
 
     if (blur == null) return;
 
-    addHistory(blur: blur, heroScreenshotRequired: true);
+    addHistory(
+      blur: blur,
+      heroScreenshotRequired: true,
+    );
 
     setState(() {});
     mainEditorCallbacks?.handleUpdateUI();
@@ -1872,7 +1626,7 @@ class ProImageEditorState extends State<ProImageEditor>
   /// active and restored
   /// after its closure.
   void openEmojiEditor() async {
-    setState(() => layerInteractionManager.clearSelectedLayers());
+    setState(() => layerInteractionManager.selectedLayerId = '');
     _checkInteractiveViewer();
     ServicesBinding.instance.keyboard.removeHandler(_onKeyEvent);
     final effectiveBoxConstraints = emojiEditorConfigs
@@ -1883,39 +1637,37 @@ class ProImageEditorState extends State<ProImageEditor>
         emojiEditorConfigs.style.themeDraggableSheet;
     bool useDraggableSheet = sheetTheme.maxChildSize != sheetTheme.minChildSize;
     EmojiLayer? layer = await showModalBottomSheet(
-      context: context,
-      backgroundColor: emojiEditorConfigs.style.backgroundColor,
-      constraints: effectiveBoxConstraints,
-      showDragHandle: emojiEditorConfigs.style.showDragHandle,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (BuildContext context) => SafeArea(
-        child: !useDraggableSheet
-            ? ConstrainedBox(
-                constraints: effectiveBoxConstraints ??
-                    BoxConstraints(
-                      maxHeight: 300 + MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                child: EmojiEditor(configs: configs),
-              )
-            : DraggableScrollableSheet(
-                expand: sheetTheme.expand,
-                initialChildSize: sheetTheme.initialChildSize,
-                maxChildSize: sheetTheme.maxChildSize,
-                minChildSize: sheetTheme.minChildSize,
-                shouldCloseOnMinExtent: sheetTheme.shouldCloseOnMinExtent,
-                snap: sheetTheme.snap,
-                snapAnimationDuration: sheetTheme.snapAnimationDuration,
-                snapSizes: sheetTheme.snapSizes,
-                builder: (_, controller) {
-                  return EmojiEditor(
-                    configs: configs,
-                    scrollController: controller,
-                  );
-                },
-              ),
-      ),
-    );
+        context: context,
+        backgroundColor: emojiEditorConfigs.style.backgroundColor,
+        constraints: effectiveBoxConstraints,
+        showDragHandle: emojiEditorConfigs.style.showDragHandle,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (BuildContext context) => SafeArea(
+              child: !useDraggableSheet
+                  ? ConstrainedBox(
+                      constraints: effectiveBoxConstraints ??
+                          BoxConstraints(
+                              maxHeight: 300 +
+                                  MediaQuery.viewInsetsOf(context).bottom),
+                      child: EmojiEditor(configs: configs),
+                    )
+                  : DraggableScrollableSheet(
+                      expand: sheetTheme.expand,
+                      initialChildSize: sheetTheme.initialChildSize,
+                      maxChildSize: sheetTheme.maxChildSize,
+                      minChildSize: sheetTheme.minChildSize,
+                      shouldCloseOnMinExtent: sheetTheme.shouldCloseOnMinExtent,
+                      snap: sheetTheme.snap,
+                      snapAnimationDuration: sheetTheme.snapAnimationDuration,
+                      snapSizes: sheetTheme.snapSizes,
+                      builder: (_, controller) {
+                        return EmojiEditor(
+                          configs: configs,
+                          scrollController: controller,
+                        );
+                      }),
+            ));
     ServicesBinding.instance.keyboard.addHandler(_onKeyEvent);
     if (layer == null || !mounted) return;
     layer.scale = emojiEditorConfigs.initScale;
@@ -1936,31 +1688,30 @@ class ProImageEditorState extends State<ProImageEditor>
         ?.call(context, configs);
     var sheetTheme = stickerEditorConfigs.style.draggableSheetStyle;
     WidgetLayer? layer = await showModalBottomSheet(
-      context: context,
-      backgroundColor: stickerEditorConfigs.style.bottomSheetBackgroundColor,
-      constraints: effectiveBoxConstraints,
-      showDragHandle: stickerEditorConfigs.style.showDragHandle,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => SafeArea(
-        child: DraggableScrollableSheet(
-          expand: sheetTheme.expand,
-          initialChildSize: sheetTheme.initialChildSize,
-          maxChildSize: sheetTheme.maxChildSize,
-          minChildSize: sheetTheme.minChildSize,
-          shouldCloseOnMinExtent: sheetTheme.shouldCloseOnMinExtent,
-          snap: sheetTheme.snap,
-          snapAnimationDuration: sheetTheme.snapAnimationDuration,
-          snapSizes: sheetTheme.snapSizes,
-          builder: (_, controller) {
-            return StickerEditor(
-              configs: configs,
-              scrollController: controller,
-            );
-          },
-        ),
-      ),
-    );
+        context: context,
+        backgroundColor: stickerEditorConfigs.style.bottomSheetBackgroundColor,
+        constraints: effectiveBoxConstraints,
+        showDragHandle: stickerEditorConfigs.style.showDragHandle,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (_) => SafeArea(
+              child: DraggableScrollableSheet(
+                expand: sheetTheme.expand,
+                initialChildSize: sheetTheme.initialChildSize,
+                maxChildSize: sheetTheme.maxChildSize,
+                minChildSize: sheetTheme.minChildSize,
+                shouldCloseOnMinExtent: sheetTheme.shouldCloseOnMinExtent,
+                snap: sheetTheme.snap,
+                snapAnimationDuration: sheetTheme.snapAnimationDuration,
+                snapSizes: sheetTheme.snapSizes,
+                builder: (_, controller) {
+                  return StickerEditor(
+                    configs: configs,
+                    scrollController: controller,
+                  );
+                },
+              ),
+            ));
     ServicesBinding.instance.keyboard.addHandler(_onKeyEvent);
     if (layer == null || !mounted) return;
 
@@ -1974,15 +1725,16 @@ class ProImageEditorState extends State<ProImageEditor>
   ///
   /// - `oldIndex` is the current index of the layer.
   /// - `newIndex` is the desired index to move the layer to.
-  void moveLayerListPosition({required int oldIndex, required int newIndex}) {
-    if (oldIndex == newIndex || oldIndex < 0 || newIndex < 0) return;
-
-    final layers = _layerCopyManager.copyLayerList(activeLayers);
-
-    if (oldIndex < layers.length && newIndex <= layers.length) {
-      final item = layers.removeAt(oldIndex);
-
-      // Insert directly at newIndex, no adjustment needed
+  void moveLayerListPosition({
+    required int oldIndex,
+    required int newIndex,
+  }) {
+    List<Layer> layers = _layerCopyManager.copyLayerList(activeLayers);
+    if (newIndex > oldIndex) {
+      var item = layers.removeAt(oldIndex);
+      layers.insert(newIndex - 1, item);
+    } else {
+      var item = layers.removeAt(oldIndex);
       layers.insert(newIndex, item);
     }
     addHistory(layers: layers);
@@ -1998,7 +1750,7 @@ class ProImageEditorState extends State<ProImageEditor>
   void undoAction() {
     if (stateManager.canUndo) {
       setState(() {
-        layerInteractionManager.clearSelectedLayers();
+        layerInteractionManager.selectedLayerId = '';
         _checkInteractiveViewer();
         stateManager.undo();
         decodeImage();
@@ -2017,7 +1769,7 @@ class ProImageEditorState extends State<ProImageEditor>
   void redoAction() {
     if (stateManager.canRedo) {
       setState(() {
-        layerInteractionManager.clearSelectedLayers();
+        layerInteractionManager.selectedLayerId = '';
         _checkInteractiveViewer();
         stateManager.redo();
         decodeImage();
@@ -2035,13 +1787,9 @@ class ProImageEditorState extends State<ProImageEditor>
   ///   loaded.
   /// - The screenshot is taken in a post-frame callback to ensure the UI is
   ///   fully rendered.
-  void _takeScreenshot({bool replaceLastScreenshot = false}) async {
+  void _takeScreenshot() async {
     // Wait for the editor to be fully open, if it is currently opening
     if (isSubEditorOpen) await _pageOpenCompleter.future;
-
-    if (replaceLastScreenshot) {
-      stateManager.screenshots.removeLast();
-    }
 
     // Capture the screenshot in a post-frame callback to ensure the UI is fully
     // rendered
@@ -2068,7 +1816,6 @@ class ProImageEditorState extends State<ProImageEditor>
   /// Before returning the edited image, a loading dialog is displayed to
   /// indicate that the operation is in progress.
   void doneEditing() async {
-    mainEditorCallbacks?.handleDone();
     if (_isProcessingFinalImage) return;
     if (!stateManager.canUndo && activeLayers.isEmpty) {
       if (!imageGenerationConfigs.allowEmptyEditingCompletion) {
@@ -2081,7 +1828,7 @@ class ProImageEditorState extends State<ProImageEditor>
     /// a correct image.
     setState(() {
       _isProcessingFinalImage = true;
-      layerInteractionManager.clearSelectedLayers();
+      layerInteractionManager.selectedLayerId = '';
       _checkInteractiveViewer();
     });
 
@@ -2108,9 +1855,7 @@ class ProImageEditorState extends State<ProImageEditor>
         final results = await Future.wait([
           captureEditorImage(),
           _controllers.screenshot.getRawRenderedImage(
-            imageInfos: _imageInfos!,
-            useThumbnailSize: false,
-          ),
+              imageInfos: _imageInfos!, useThumbnailSize: false),
         ]);
 
         await callbacks.onThumbnailGenerated!(
@@ -2131,10 +1876,10 @@ class ProImageEditorState extends State<ProImageEditor>
         await onCompleteWithParameters?.call(
           CompleteParameters(
             blur: stateManager.activeBlur,
-            matrixFilterList: stateManager.activeFilters,
-            matrixTuneAdjustmentsList: stateManager.activeTuneAdjustments
-                .map((item) => item.matrix)
-                .toList(),
+            colorFilters: [
+              ...stateManager.activeFilters,
+              ...stateManager.activeTuneAdjustments.map((item) => item.matrix),
+            ],
             startTime: widget.videoController?.startTime,
             endTime: widget.videoController?.endTime,
             cropWidth: isTransformed ? outputSize.width.round() : null,
@@ -2291,13 +2036,7 @@ class ProImageEditorState extends State<ProImageEditor>
   /// After importing, it updates the UI by calling [setState()] and the
   /// optional [onUpdateUI] callback.
   Future<void> importStateHistory(ImportStateHistory import) async {
-    mainEditorCallbacks?.onImportHistoryStart?.call(this, import);
-
-    await _stateHistoryService.importStateHistory(
-      import,
-      context,
-      () => setState(() {}),
-    );
+    await _stateHistoryService.importStateHistory(import, context);
     await decodeImage();
   }
 
@@ -2334,7 +2073,9 @@ class ProImageEditorState extends State<ProImageEditor>
   ///
   /// See also:
   /// - [unlockAllLayers] to unlock all layers.
-  void lockAllLayers({bool onlyCurrentHistory = false}) {
+  void lockAllLayers({
+    bool onlyCurrentHistory = false,
+  }) {
     stateManager.updateLayerInteraction(
       enableInteraction: false,
       onlyCurrentHistory: onlyCurrentHistory,
@@ -2353,7 +2094,9 @@ class ProImageEditorState extends State<ProImageEditor>
   ///
   /// See also:
   /// - [lockAllLayers] to lock all layers.
-  void unlockAllLayers({bool onlyCurrentHistory = false}) {
+  void unlockAllLayers({
+    bool onlyCurrentHistory = false,
+  }) {
     stateManager.updateLayerInteraction(
       enableInteraction: true,
       onlyCurrentHistory: onlyCurrentHistory,
@@ -2361,10 +2104,12 @@ class ProImageEditorState extends State<ProImageEditor>
   }
 
   /// Clears the currently selected layer by:
+  /// - Resetting the selected layer index to -1
   /// - Clearing the selected layer ID in the [layerInteractionManager]
   /// - Notifying listeners via [_controllers.uiLayerCtrl]
   void clearLayerSelection() {
-    layerInteractionManager.clearSelectedLayers();
+    selectedLayerIndex = -1;
+    layerInteractionManager.selectedLayerId = '';
     _controllers.uiLayerCtrl.add(null);
   }
 
@@ -2376,7 +2121,7 @@ class ProImageEditorState extends State<ProImageEditor>
   /// are notified.
   ///
   /// Returns the selected [Layer] or `null` if the index is invalid.
-  Layer? selectLayerByIndex(int index, {bool enableMultiSelect = false}) {
+  Layer? selectLayerByIndex(int index) {
     if (index < 0 || index >= activeLayers.length) {
       clearLayerSelection();
       return null;
@@ -2384,7 +2129,10 @@ class ProImageEditorState extends State<ProImageEditor>
 
     var layer = activeLayers[index];
 
-    return selectLayerById(layer.id, enableMultiSelect: enableMultiSelect);
+    layerInteractionManager.selectedLayerId = layer.id;
+    _controllers.uiLayerCtrl.add(null);
+
+    return activeLayers[index];
   }
 
   /// Selects a layer by its unique [id].
@@ -2393,36 +2141,9 @@ class ProImageEditorState extends State<ProImageEditor>
   ///
   /// Returns the selected [Layer] or `null` if the ID does not match any
   /// active layer.
-  Layer? selectLayerById(String id, {bool enableMultiSelect = false}) {
-    int index = activeLayers.indexWhere((layer) => layer.id == id);
-    if (index == -1) return null;
-
-    Layer? layer = activeLayers[index];
-
-    // Check if the layer allows selection
-    if (!layer.interaction.enableSelection) return null;
-
-    if (!enableMultiSelect) layerInteractionManager.clearSelectedLayers();
-
-    layerInteractionManager.addSelectedLayer(id);
-    _controllers.uiLayerCtrl.add(null);
-    return layer;
-  }
-
-  /// Selects all available layers.
-  void selectAllLayers() {
-    layerInteractionManager.setSelectedLayers(
-      activeLayers
-          .where((layer) => layer.interaction.enableSelection)
-          .map((layer) => layer.id),
-    );
-    _controllers.uiLayerCtrl.add(null);
-  }
-
-  /// Deselects all currently selected layers.
-  void unselectAllLayers() {
-    layerInteractionManager.clearSelectedLayers();
-    _controllers.uiLayerCtrl.add(null);
+  Layer? selectLayerById(String id) {
+    var index = activeLayers.indexWhere((layer) => layer.id == id);
+    return selectLayerByIndex(index);
   }
 
   @override
@@ -2488,18 +2209,16 @@ class ProImageEditorState extends State<ProImageEditor>
                   bottom: mainEditorConfigs.safeArea.bottom,
                   left: mainEditorConfigs.safeArea.left,
                   right: mainEditorConfigs.safeArea.right,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      sizesManager.editorSize = constraints.biggest;
-                      return Scaffold(
-                        backgroundColor: mainEditorConfigs.style.background,
-                        resizeToAvoidBottomInset: false,
-                        appBar: _buildAppBar(),
-                        body: _buildBody(),
-                        bottomNavigationBar: _buildBottomNavBar(),
-                      );
-                    },
-                  ),
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    sizesManager.editorSize = constraints.biggest;
+                    return Scaffold(
+                      backgroundColor: mainEditorConfigs.style.background,
+                      resizeToAvoidBottomInset: false,
+                      appBar: _buildAppBar(),
+                      body: _buildBody(),
+                      bottomNavigationBar: _buildBottomNavBar(),
+                    );
+                  }),
                 ),
               ),
             ),
@@ -2511,13 +2230,11 @@ class ProImageEditorState extends State<ProImageEditor>
 
   PreferredSizeWidget? _buildAppBar() {
     if (mainEditorConfigs.widgets.appBar != null) {
-      return mainEditorConfigs.widgets.appBar!.call(
-        this,
-        _rebuildController.stream,
-      );
+      return mainEditorConfigs.widgets.appBar!
+          .call(this, _rebuildController.stream);
     }
 
-    return hasSelectedLayers &&
+    return selectedLayerIndex >= 0 &&
             configs.layerInteraction.hideToolbarOnInteraction
         ? null
         : MainEditorAppBar(
@@ -2537,82 +2254,52 @@ class ProImageEditorState extends State<ProImageEditor>
       sizesManager.bodySize = constraints.biggest;
       return !_isVideoPlayerReady
           ? _buildSetupSpinner()
-          : Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: (details) {
-                _lastDownEvent = details;
-                _tapDownTimestamp = DateTime.now();
-                _mouseService.onPointerDown(details);
-                if (layerInteractionManager.selectedLayerId.isNotEmpty ||
-                    GestureManager.instance.isBlocked) {
-                  return;
-                }
-                bool isDoubleTap = detectDoubleTap(details);
-                if (!isDoubleTap) return;
-
-                handleDoubleTap(context, details, mainEditorConfigs);
-                mainEditorCallbacks?.onDoubleTap?.call();
-              },
-              onPointerUp: (event) {
-                _mouseService.onPointerUp(event);
-                onPointerUp(event);
-
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final offsetDistance =
-                      (event.position - _lastDownEvent!.position).distance;
-                  final timeElapsed = DateTime.now()
-                      .difference(_tapDownTimestamp)
-                      .inMilliseconds;
-
-                  // Ignore if pointer moved too much (exceeds tap slop)
-                  if (offsetDistance >= tapSlop) return;
-
-                  // Ignore if tap took too long (not a quick tap)
-                  if (timeElapsed > tapTimeElapsed) return;
-
-                  if (!configs.videoEditor.enablePlayButton) {
-                    widget.videoController?.togglePlayState();
-                  }
-                  mainEditorCallbacks?.onTap?.call();
-                });
-              },
-              onPointerSignal: isDesktop && hasSelectedLayers
-                  ? (event) {
-                      final hasMultiSelection = selectedLayers.length > 1;
-
-                      final zoomEnabled = mainEditorConfigs.enableZoom;
-                      final zoomGestureActive = interactiveViewer
-                              .currentState?.isInteractionEnabled ==
-                          true;
-
-                      if ((hasMultiSelection && zoomEnabled) ||
-                          (zoomEnabled && zoomGestureActive)) {
-                        return;
-                      }
-
-                      /// Otherwise, handle scroll as a layer scaling
-                      /// interaction.
-                      _desktopInteractionManager.mouseScroll(event,
-                          selectedLayers: selectedLayers,
-                          interactiveViewer: interactiveViewer.currentState);
-                    }
-                  : null,
-              child: GestureDetector(
+          : AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Listener(
                 behavior: HitTestBehavior.translucent,
-                onTap: () {
-                  /// That function is required so that multiselect works
-                  /// correctly, even when it’s empty.
+                onPointerDown: (details) {
+                  bool isDoubleTap = detectDoubleTap(details);
+                  if (!isDoubleTap) return;
+
+                  handleDoubleTap(context, details, mainEditorConfigs);
+                  mainEditorCallbacks?.onDoubleTap?.call();
                 },
-                onLongPress: mainEditorCallbacks?.onLongPress,
-                onScaleStart: _onScaleStart,
-                onScaleUpdate: _onScaleUpdate,
-                onScaleEnd: _onScaleEnd,
-                child: mainEditorConfigs.widgets.wrapBody?.call(
-                      this,
-                      _rebuildController.stream,
+                onPointerUp: onPointerUp,
+                onPointerSignal: isDesktop && _activeLayer != null
+                    ? (event) {
+                        if (_activeLayer == null) return;
+                        _desktopInteractionManager.mouseScroll(
+                          event,
+                          activeLayer: _activeLayer!,
+                          selectedLayerIndex: selectedLayerIndex,
+                        );
+                      }
+                    : null,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    if (layerInteractionManager.selectedLayerId.isNotEmpty) {
+                      layerInteractionManager.selectedLayerId = '';
+                      _checkInteractiveViewer();
+                      setState(() {});
+                    }
+                    if (!configs.videoEditor.enablePlayButton) {
+                      widget.videoController?.togglePlayState();
+                    }
+                    mainEditorCallbacks?.onTap?.call();
+                  },
+                  onLongPress: mainEditorCallbacks?.onLongPress,
+                  onScaleStart: _onScaleStart,
+                  onScaleUpdate: _onScaleUpdate,
+                  onScaleEnd: _onScaleEnd,
+                  child: mainEditorConfigs.widgets.wrapBody?.call(
+                        this,
+                        _rebuildController.stream,
+                        _buildInteractiveContent(),
+                      ) ??
                       _buildInteractiveContent(),
-                    ) ??
-                    _buildInteractiveContent(),
+                ),
               ),
             );
     });
@@ -2630,6 +2317,7 @@ class ProImageEditorState extends State<ProImageEditor>
       configs: configs,
       layerInteractionManager: layerInteractionManager,
       controllers: _controllers,
+      selectedLayerIndex: selectedLayerIndex,
       processFinalImage: _isProcessingFinalImage,
       rebuildController: _rebuildController,
       stateManager: stateManager,
@@ -2637,20 +2325,16 @@ class ProImageEditorState extends State<ProImageEditor>
       state: this,
       videoController: widget.videoController,
       isVideoEditor: _isVideoEditor,
-      layerDragSelectionService: _layerDragSelectionService,
     );
   }
 
   Widget? _buildBottomNavBar() {
     if (mainEditorConfigs.widgets.bottomBar != null) {
-      return mainEditorConfigs.widgets.bottomBar!.call(
-        this,
-        _rebuildController.stream,
-        _bottomBarKey,
-      );
+      return mainEditorConfigs.widgets.bottomBar!
+          .call(this, _rebuildController.stream, _bottomBarKey);
     }
 
-    return hasSelectedLayers &&
+    return selectedLayerIndex >= 0 &&
             configs.layerInteraction.hideToolbarOnInteraction
         ? null
         : MainEditorBottombar(
@@ -2673,17 +2357,18 @@ class ProImageEditorState extends State<ProImageEditor>
   Widget _buildLayers() {
     return MainEditorLayers(
       controllers: _controllers,
+      layerInteraction: layerInteraction,
       layerInteractionManager: layerInteractionManager,
       configs: configs,
       callbacks: callbacks,
       sizesManager: sizesManager,
+      selectedLayerIndex: selectedLayerIndex,
       activeLayers: activeLayers,
       isSubEditorOpen: isSubEditorOpen,
-      onCheckInteractiveViewer: _checkInteractiveViewer,
+      checkInteractiveViewer: _checkInteractiveViewer,
       onTextLayerTap: _onTextLayerTap,
       state: this,
-      dragSelectionService: _layerDragSelectionService,
-      mouseService: _mouseService,
+      setTempLayer: _setTempLayer,
       onContextMenuToggled: (isOpen) {
         _isContextMenuOpen = isOpen;
       },
@@ -2702,6 +2387,9 @@ class ProImageEditorState extends State<ProImageEditor>
   }
 
   Widget _buildRemoveArea() {
+    if (_activeLayer?.interaction.enableMove == false) {
+      return const SizedBox.shrink();
+    }
     return MainEditorRemoveLayerArea(
       layerInteraction: layerInteraction,
       layerInteractionManager: layerInteractionManager,
@@ -2709,7 +2397,6 @@ class ProImageEditorState extends State<ProImageEditor>
       state: this,
       controllers: _controllers,
       removeAreaKey: _removeAreaKey,
-      isLayerBeingTransformed: isLayerBeingTransformed,
     );
   }
 
@@ -2731,13 +2418,10 @@ class ProImageEditorState extends State<ProImageEditor>
           _isVideoEditor ? GlobalKey() : _backgroundImageColorFilterKey,
       heroTag: _isVideoEditor ? 'image-${configs.heroTag}' : configs.heroTag,
       configs: configs,
-      editorImage: editorImage,
-      isInitialized: _isInitialized ||
-          stateHistoryConfigs.initStateHistory != null ||
-          _stateHistoryService.isImportInProgress,
+      editorImage: editorImage!,
+      isInitialized: _isInitialized,
       sizesManager: sizesManager,
       stateManager: stateManager,
-      blankSize: widget.blankSize,
     );
   }
 

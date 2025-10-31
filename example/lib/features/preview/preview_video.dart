@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -15,17 +16,17 @@ import '/shared/widgets/pixel_transparent_painter.dart';
 /// Displays the video and optionally shows when it was generated.
 class PreviewVideo extends StatefulWidget {
   /// Creates a [PreviewVideo] widget.
+  ///
+  /// [bytes] contains the raw video data.
+  /// [generationTime] represents how long it took to generate the video.
   const PreviewVideo({
     super.key,
-    required this.filePath,
+    required this.bytes,
     required this.generationTime,
   });
 
-  /// The file path of the video to be previewed.
-  ///
-  /// This property holds the location of the video file as a string.
-  /// It is used to load and display the video in the preview feature.
-  final String filePath;
+  /// The raw video data to preview.
+  final Uint8List bytes;
 
   /// The time it took to generate the video preview.
   final Duration generationTime;
@@ -48,9 +49,9 @@ class _PreviewVideoState extends State<PreviewVideo> {
   void initState() {
     super.initState();
 
-    _videoMetadata = ProVideoEditor.instance.getMetadata(
-      EditorVideo.file(widget.filePath),
-    );
+    _videoMetadata = ProVideoEditor.instance.getMetadata(EditorVideo.memory(
+      widget.bytes,
+    ));
     _initializePlayer();
   }
 
@@ -61,7 +62,7 @@ class _PreviewVideoState extends State<PreviewVideo> {
   }
 
   void _initializePlayer() async {
-    var media = Media('file://${widget.filePath}');
+    var media = await Media.memory(widget.bytes);
     await _player.open(media, play: true);
   }
 

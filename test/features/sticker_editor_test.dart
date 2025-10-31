@@ -14,12 +14,8 @@ void main() {
         home: StickerEditor(
           scrollController: ScrollController(),
           configs: ProImageEditorConfigs(
-            mainEditor: const MainEditorConfigs(
-              tools: [
-                SubEditorMode.sticker,
-              ],
-            ),
             stickerEditor: StickerEditorConfigs(
+              enabled: true,
               builder: (setLayer, scrollController) {
                 return Container();
               },

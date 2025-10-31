@@ -66,7 +66,15 @@ class _SignatureDrawingExampleState extends State<SignatureDrawingExample>
                       configs: ProImageEditorConfigs(
                         designMode: platformDesignMode,
                         paintEditor: PaintEditorConfigs(
-                          tools: [],
+                          enableModeFreeStyle: false,
+                          enableModeArrow: false,
+                          enableModeLine: false,
+                          enableModeRect: false,
+                          enableModeCircle: false,
+                          enableModeDashLine: false,
+                          enableModeEraser: false,
+                          enableModeBlur: false,
+                          enableModePixelate: false,
                           showToggleFillButton: false,
 
                           /// Optional true

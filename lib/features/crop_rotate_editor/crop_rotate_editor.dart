@@ -1,10 +1,8 @@
-// ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
 // Dart imports:
 // ignore_for_file: deprecated_member_use_from_same_package
 
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -27,7 +25,6 @@ import '/shared/mixins/extended_loop.dart';
 import '/shared/services/content_recorder/widgets/record_invisible_widget.dart';
 import '/shared/services/layer_transform_generator.dart';
 import '/shared/utils/file_constructor_utils.dart';
-import '/shared/utils/transparent_image_generator_utils.dart';
 import '/shared/widgets/extended/extended_custom_paint.dart';
 import '/shared/widgets/extended/extended_transform_scale.dart';
 import '/shared/widgets/extended/extended_transform_translate.dart';
@@ -379,9 +376,6 @@ class CropRotateEditorState extends State<CropRotateEditor>
 
   bool _isVideoPlayerReady = true;
 
-  /// Defines which crop-rotate tools are available in the editor.
-  late List<CropRotateTool> tools = [...cropRotateEditorConfigs.tools];
-
   @override
   void initState() {
     super.initState();
@@ -464,21 +458,6 @@ class CropRotateEditorState extends State<CropRotateEditor>
 
     // Perform post-frame initialization
     cropRotateEditorCallbacks?.onInit?.call();
-
-    // TODO: Remove when releasing version 12.0.0.
-    tools.removeWhere((el) {
-      switch (el) {
-        case CropRotateTool.rotate:
-          return !cropRotateEditorConfigs.showRotateButton;
-        case CropRotateTool.flip:
-          return !cropRotateEditorConfigs.showFlipButton;
-        case CropRotateTool.aspectRatio:
-          return !cropRotateEditorConfigs.showAspectRatioButton;
-        case CropRotateTool.reset:
-          return !cropRotateEditorConfigs.showResetButton;
-      }
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       cropRotateEditorCallbacks?.onAfterViewInit?.call();
       initialized = true;
@@ -568,6 +547,19 @@ class CropRotateEditorState extends State<CropRotateEditor>
     if (!isVideoEditor || !initConfigs.convertToUint8List) return;
 
     _isVideoPlayerReady = false;
+    Future<Uint8List> createTransparentImage(
+        double width, double height) async {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
+      final paint = Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0);
+      canvas.drawRect(Rect.fromLTWH(0.0, 0.0, width, height), paint);
+
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(width.toInt(), height.toInt());
+      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+
+      return pngBytes!.buffer.asUint8List();
+    }
 
     widget.videoController!.initialize(
       configsFunction: () => configs.videoEditor,
@@ -578,7 +570,10 @@ class CropRotateEditorState extends State<CropRotateEditor>
     final resolution = widget.videoController!.initialResolution;
 
     videoBackgroundImage = EditorImage(
-      byteArray: await createTransparentImage(resolution),
+      byteArray: await createTransparentImage(
+        resolution.width,
+        resolution.height,
+      ),
     );
     _isVideoPlayerReady = true;
 
@@ -854,9 +849,10 @@ class CropRotateEditorState extends State<CropRotateEditor>
         await callbacks.onCompleteWithParameters?.call(
           CompleteParameters(
             blur: appliedBlurFactor,
-            matrixFilterList: appliedFilters,
-            matrixTuneAdjustmentsList:
-                appliedTuneAdjustments.map((item) => item.matrix).toList(),
+            colorFilters: [
+              ...appliedFilters,
+              ...appliedTuneAdjustments.map((item) => item.matrix),
+            ],
             cropWidth: isTransformed ? outputSize.width.round() : null,
             cropHeight: isTransformed ? outputSize.height.round() : null,
             cropX: isTransformed ? outputOffset.dx.round() : null,
@@ -1135,36 +1131,6 @@ class CropRotateEditorState extends State<CropRotateEditor>
     calcFitToScreen();
     addHistory(scaleRotation: oldScaleFactor, angle: 0);
     _updateAllStates();
-  }
-
-  late CropMode _cropMode = widget.initConfigs.transformConfigs?.cropMode ??
-      cropRotateEditorConfigs.initialCropMode;
-
-  /// Gets the current crop mode.
-  ///
-  /// Returns [CropMode.circular] if the round cropper is enabled,
-  /// otherwise returns [CropMode.rectangular].
-  @override
-  CropMode get cropMode => _cropMode;
-
-  /// Sets the crop mode.
-  ///
-  /// If [value] is [CropMode.circular], it enables the round cropper,
-  /// sets the aspect ratio to 1 (square), and updates the internal state.
-  /// If [value] is [CropMode.rectangular], it disables the round cropper
-  /// and updates the internal state accordingly.
-  @override
-  set cropMode(CropMode value) => setCropMode(value);
-
-  @override
-  void setCropMode(
-    CropMode value, {
-    bool updateStates = true,
-    bool updateHistory = true,
-  }) {
-    _cropMode = value;
-    if (updateStates) _updateAllStates();
-    if (updateHistory) addHistory();
   }
 
   @override
@@ -2118,7 +2084,6 @@ class CropRotateEditorState extends State<CropRotateEditor>
       child: RecordInvisibleWidget(
         controller: screenshotCtrl,
         child: ExtendedPopScope(
-          canPop: cropRotateEditorConfigs.enableGesturePop,
           onPopInvokedWithResult: (didPop, _) {
             _showFakeHero = true;
             _updateAllStates();
@@ -2181,13 +2146,15 @@ class CropRotateEditorState extends State<CropRotateEditor>
           .call(this, rebuildController.stream);
     }
 
-    return tools.isNotEmpty
+    return cropRotateEditorConfigs.showRotateButton ||
+            cropRotateEditorConfigs.showFlipButton ||
+            cropRotateEditorConfigs.showAspectRatioButton ||
+            cropRotateEditorConfigs.showResetButton
         ? CropEditorBottombar(
             bottomBarScrollCtrl: _bottomBarScrollCtrl,
             i18n: i18n.cropRotateEditor,
             configs: cropRotateEditorConfigs,
             theme: theme,
-            tools: tools,
             onRotate: rotate,
             onFlip: flip,
             onOpenAspectRatioOptions: openAspectRatioOptions,
@@ -2339,34 +2306,10 @@ class CropRotateEditorState extends State<CropRotateEditor>
     );
   }
 
-  Widget _buildFlipTransform({required Widget child}) {
-    if (!cropRotateEditorConfigs.enableFlipAnimation) {
-      return Transform.flip(
-        flipX: flipX,
-        flipY: flipY,
-        child: child,
-      );
-    }
-
-    return TweenAnimationBuilder<double>(
-      duration: cropRotateEditorConfigs.animationDuration,
-      tween: Tween<double>(begin: 1.0, end: flipX ? -1.0 : 1.0),
-      curve: cropRotateEditorConfigs.flipAnimationCurve,
-      builder: (context, scaleX, child) {
-        return TweenAnimationBuilder<double>(
-          duration: cropRotateEditorConfigs.animationDuration,
-          tween: Tween<double>(begin: 1.0, end: flipY ? -1.0 : 1.0),
-          curve: cropRotateEditorConfigs.flipAnimationCurve,
-          builder: (context, scaleY, child) {
-            return Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.diagonal3Values(scaleX, scaleY, 1),
-              child: child,
-            );
-          },
-          child: child,
-        );
-      },
+  Transform _buildFlipTransform({required Widget child}) {
+    return Transform.flip(
+      flipX: flipX,
+      flipY: flipY,
       child: child,
     );
   }
@@ -2447,7 +2390,6 @@ class CropRotateEditorState extends State<CropRotateEditor>
                 height: _imgHeight,
                 image: editorImage,
                 videoPlayer: videoController?.videoPlayer,
-                blankSize: initConfigs.mainImageSize,
               ),
               if (cropRotateEditorConfigs.showLayers &&
                   cropRotateEditorConfigs.enableTransformLayers &&
@@ -2497,7 +2439,6 @@ class CropRotateEditorState extends State<CropRotateEditor>
                   configs: configs,
                   image: editorImage,
                   videoPlayer: videoController?.videoPlayer,
-                  blankSize: initConfigs.mainImageSize,
                   filters: appliedFilters,
                   tuneAdjustments: appliedTuneAdjustments,
                   blurFactor: appliedBlurFactor,
@@ -2544,66 +2485,11 @@ class CropRotateEditorState extends State<CropRotateEditor>
           videoPlayer: isVideoEditor && initConfigs.convertToUint8List
               ? const SizedBox.shrink()
               : videoController?.videoPlayer,
-          blankSize: initConfigs.mainImageSize,
           filters: appliedFilters,
           tuneAdjustments: appliedTuneAdjustments,
           blurFactor: appliedBlurFactor,
         ),
       ),
     );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-
-    properties
-      // General configuration
-      ..add(DiagnosticsProperty<CropRotateEditorInitConfigs>(
-          'initConfigs', widget.initConfigs))
-      ..add(
-          DiagnosticsProperty<EditorImage?>('editorImage', widget.editorImage))
-      ..add(DiagnosticsProperty<ProVideoController?>(
-          'videoController', widget.videoController))
-
-      // Crop/Transform state
-      ..add(
-          DiagnosticsProperty<TransformConfigs>('activeHistory', activeHistory))
-      ..add(IntProperty('rotationCount', rotationCount))
-      ..add(FlagProperty('flipX', value: flipX, ifTrue: 'flipped X'))
-      ..add(FlagProperty('flipY', value: flipY, ifTrue: 'flipped Y'))
-      ..add(DoubleProperty('aspectRatio', aspectRatio))
-      ..add(EnumProperty<CropMode>('cropMode', cropMode))
-      ..add(DoubleProperty('userScaleFactor', userScaleFactor))
-      ..add(DoubleProperty('oldScaleFactor', oldScaleFactor))
-      ..add(DoubleProperty('rotationScaleFactor', _rotationScaleFactor))
-      ..add(DiagnosticsProperty<Offset>('translate', translate))
-      ..add(DiagnosticsProperty<Rect>('cropRect', cropRect))
-      ..add(DiagnosticsProperty<Rect>('viewRect', _viewRect))
-
-      // Status flags
-      ..add(FlagProperty('showFakeHero',
-          value: _showFakeHero, ifTrue: 'showing fake hero'))
-      ..add(FlagProperty('enableFakeHero',
-          value: enableFakeHero, ifTrue: 'fake hero enabled'))
-      ..add(FlagProperty('imageNeedDecode',
-          value: _imageNeedDecode, ifTrue: 'image needs decode'))
-      ..add(FlagProperty('imageSizeIsDecoded',
-          value: _imageSizeIsDecoded, ifTrue: 'image size decoded'))
-      ..add(FlagProperty('interactionActive',
-          value: _interactionActive, ifTrue: 'interaction active'))
-      ..add(FlagProperty('scaleStarted',
-          value: _scaleStarted, ifTrue: 'scale started'))
-
-      // Sizes
-      ..add(DiagnosticsProperty<Size>('editorBodySize', editorBodySize))
-      ..add(DiagnosticsProperty<Size>('mainImageSize', _mainImageSize))
-      ..add(DiagnosticsProperty<Size>('renderedImgSize', _renderedImgSize))
-      ..add(DiagnosticsProperty<BoxConstraints>(
-          'renderedImgConstraints', _renderedImgConstraints))
-
-      // Input
-      ..add(DiagnosticsProperty<MouseCursor>('mouseCursor', _mouseCursor))
-      ..add(IntProperty('activePointers', _activePointers));
   }
 }

@@ -3,13 +3,8 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 
-import '/core/constants/int_constants.dart';
 import '/features/crop_rotate_editor/enums/crop_rotate_angle_side.dart';
 import '/features/crop_rotate_editor/utils/rotate_angle.dart';
-import '/pro_image_editor.dart';
-import '/shared/extensions/export_bool_extension.dart';
-import '/shared/extensions/num_extension.dart';
-import '/shared/utils/parser/bool_parser.dart';
 
 /// A class representing configuration settings for image transformation.
 ///
@@ -47,7 +42,6 @@ class TransformConfigs {
     required this.flipX,
     required this.flipY,
     required this.offset,
-    this.cropMode = CropMode.rectangular,
   });
 
   /// Creates a [TransformConfigs] instance from a map.
@@ -67,14 +61,12 @@ class TransformConfigs {
         map['originalSize']?['width'] ?? 0,
         map['originalSize']?['height'] ?? 0,
       ),
-      cropEditorScreenRatio:
-          safeParseDouble(map['cropEditorScreenRatio'], fallback: 0),
-      scaleUser: safeParseDouble(map['scaleUser'], fallback: 1),
-      scaleRotation: safeParseDouble(map['scaleRotation'], fallback: 1),
-      aspectRatio: safeParseDouble(map['aspectRatio'], fallback: -1),
-      flipX: safeParseBool(map['flipX']),
-      flipY: safeParseBool(map['flipY']),
-      cropMode: cropMode,
+      cropEditorScreenRatio: map['cropEditorScreenRatio'] ?? 0,
+      scaleUser: map['scaleUser'] ?? 1,
+      scaleRotation: map['scaleRotation'] ?? 1,
+      aspectRatio: map['aspectRatio'] ?? -1,
+      flipX: map['flipX'] ?? false,
+      flipY: map['flipY'] ?? false,
       offset: Offset(
         map['offset']?['dx'] ?? 0,
         map['offset']?['dy'] ?? 0,
@@ -98,28 +90,8 @@ class TransformConfigs {
       flipX: false,
       flipY: false,
       offset: const Offset(0, 0),
-      cropMode: CropMode.rectangular,
     );
   }
-
-  /// The current cropping mode applied to the image.
-  ///
-  /// This determines how the crop operation behaves, such as oval or
-  /// rectangular.
-  final CropMode cropMode;
-
-  /// Returns `true` if the current crop mode is set to rectangular cropping.
-  ///
-  /// This getter checks whether the [cropMode] is equal to
-  /// [CropMode.rectangular], indicating that the cropper is operating in
-  /// rectangular mode.
-  bool get isRectangularCropper => cropMode == CropMode.rectangular;
-
-  /// Returns `true` if the current crop mode is set to oval cropping.
-  ///
-  /// This getter checks whether the [cropMode] is equal to [CropMode.oval],
-  /// indicating that the cropper is in oval mode.
-  bool get isOvalCropper => cropMode == CropMode.oval;
 
   /// The offset used for transformations.
   ///
@@ -236,34 +208,29 @@ class TransformConfigs {
   ///
   /// This method returns a map representation of the transformation settings,
   /// suitable for serialization or debugging.
-  Map<String, dynamic> toMap({
-    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMap() {
     if (isEmpty) return {};
     return {
-      'angle': angle.roundSmart(maxDecimalPlaces),
+      'angle': angle,
       'cropRect': {
-        'left': cropRect.left.roundSmart(maxDecimalPlaces),
-        'top': cropRect.top.roundSmart(maxDecimalPlaces),
-        'right': cropRect.right.roundSmart(maxDecimalPlaces),
-        'bottom': cropRect.bottom.roundSmart(maxDecimalPlaces),
+        'left': cropRect.left,
+        'top': cropRect.top,
+        'right': cropRect.right,
+        'bottom': cropRect.bottom,
       },
       'originalSize': {
-        'width': originalSize.width.roundSmart(maxDecimalPlaces),
-        'height': originalSize.height.roundSmart(maxDecimalPlaces),
+        'width': originalSize.width,
+        'height': originalSize.height,
       },
-      'cropEditorScreenRatio':
-          cropEditorScreenRatio.roundSmart(maxDecimalPlaces),
-      'scaleUser': scaleUser.roundSmart(maxDecimalPlaces),
-      'scaleRotation': scaleRotation.roundSmart(maxDecimalPlaces),
-      'aspectRatio': aspectRatio.roundSmart(maxDecimalPlaces),
-      'flipX': flipX.minify(enableMinify),
-      'flipY': flipY.minify(enableMinify),
-      'cropMode': cropMode.name,
+      'cropEditorScreenRatio': cropEditorScreenRatio,
+      'scaleUser': scaleUser,
+      'scaleRotation': scaleRotation,
+      'aspectRatio': aspectRatio,
+      'flipX': flipX,
+      'flipY': flipY,
       'offset': {
-        'dx': offset.dx.roundSmart(maxDecimalPlaces),
-        'dy': offset.dy.roundSmart(maxDecimalPlaces),
+        'dx': offset.dx,
+        'dy': offset.dy,
       },
     };
   }
@@ -321,37 +288,6 @@ class TransformConfigs {
           originalHeight / heightScale,
         ) /
         scaleUser;
-  }
-
-  /// Creates a copy of this [TransformConfigs] object with the given fields
-  /// replaced by new values.
-  TransformConfigs copyWith({
-    CropMode? cropMode,
-    Offset? offset,
-    double? angle,
-    double? scaleUser,
-    double? scaleRotation,
-    double? aspectRatio,
-    bool? flipX,
-    bool? flipY,
-    Rect? cropRect,
-    Size? originalSize,
-    double? cropEditorScreenRatio,
-  }) {
-    return TransformConfigs(
-      cropMode: cropMode ?? this.cropMode,
-      offset: offset ?? this.offset,
-      angle: angle ?? this.angle,
-      scaleUser: scaleUser ?? this.scaleUser,
-      scaleRotation: scaleRotation ?? this.scaleRotation,
-      aspectRatio: aspectRatio ?? this.aspectRatio,
-      flipX: flipX ?? this.flipX,
-      flipY: flipY ?? this.flipY,
-      cropRect: cropRect ?? this.cropRect,
-      originalSize: originalSize ?? this.originalSize,
-      cropEditorScreenRatio:
-          cropEditorScreenRatio ?? this.cropEditorScreenRatio,
-    );
   }
 
   @override

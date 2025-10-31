@@ -1,10 +1,6 @@
-// ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
 import '../custom_widgets/blur_editor_widgets.dart';
 import '../icons/blur_editor_icons.dart';
 import '../styles/blur_editor_style.dart';
-import 'utils/base_sub_editor_configs.dart';
 import 'utils/editor_safe_area.dart';
 
 export '../custom_widgets/blur_editor_widgets.dart';
@@ -23,16 +19,11 @@ export '../styles/blur_editor_style.dart';
 ///   maxBlur: 5.0,
 /// );
 /// ```
-class BlurEditorConfigs implements BaseSubEditorConfigs {
+class BlurEditorConfigs {
   /// Creates an instance of BlurEditorConfigs with optional settings.
   ///
   /// By default, the editor is enabled, and max blur is 5.0.
   const BlurEditorConfigs({
-    this.enableGesturePop = true,
-    @Deprecated(
-      'Use tools inside MainEditorConfigs instead, e.g. tools: '
-      '[SubEditorMode.blur]',
-    )
     this.enabled = true,
     this.showLayers = true,
     this.maxBlur = 5.0,
@@ -42,15 +33,7 @@ class BlurEditorConfigs implements BaseSubEditorConfigs {
     this.widgets = const BlurEditorWidgets(),
   }) : assert(maxBlur > 0, 'maxBlur must be positive');
 
-  /// {@macro enableGesturePop}
-  @override
-  final bool enableGesturePop;
-
   /// Indicates whether the blur editor is enabled.
-  @Deprecated(
-    'Use tools inside MainEditorConfigs instead, e.g. tools: '
-    '[SubEditorMode.blur]',
-  )
   final bool enabled;
 
   /// Show also layers in the editor.
@@ -78,7 +61,6 @@ class BlurEditorConfigs implements BaseSubEditorConfigs {
   /// [BlurEditorConfigs] with some properties updated while keeping the
   /// others unchanged.
   BlurEditorConfigs copyWith({
-    bool? enableGesturePop,
     bool? enabled,
     bool? showLayers,
     double? maxBlur,
@@ -88,7 +70,6 @@ class BlurEditorConfigs implements BaseSubEditorConfigs {
     BlurEditorWidgets? widgets,
   }) {
     return BlurEditorConfigs(
-      enableGesturePop: enableGesturePop ?? this.enableGesturePop,
       safeArea: safeArea ?? this.safeArea,
       enabled: enabled ?? this.enabled,
       showLayers: showLayers ?? this.showLayers,

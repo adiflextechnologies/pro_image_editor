@@ -1,9 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:example/core/constants/example_constants.dart';
 import 'package:example/features/preview/preview_video.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pro_image_editor/core/platform/io/io_helper.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -17,8 +16,7 @@ mixin VideoEditorMixin<T extends StatefulWidget> on State<T> {
     initialMuted: true,
     initialPlay: false,
     isAudioSupported: true,
-    minTrimDuration: Duration(seconds: 5),
-    // maxTrimDuration: Duration(seconds: 15),
+    minTrimDuration: Duration(seconds: 7),
   );
 
   /// Indicates whether a seek operation is in progress.
@@ -47,7 +45,8 @@ mixin VideoEditorMixin<T extends StatefulWidget> on State<T> {
   /// The video currently loaded in the editor.
   EditorVideo video = EditorVideo.asset(kVideoEditorExampleAssetPath);
 
-  String? _outputPath;
+  /// The result of the video export process, if completed.
+  Uint8List? exportedVideo;
 
   /// The duration it took to generate the exported video.
   Duration videoGenerationTime = Duration.zero;
@@ -66,21 +65,13 @@ mixin VideoEditorMixin<T extends StatefulWidget> on State<T> {
 
   /// Loads and sets [videoMetadata] for the given [video].
   Future<void> setMetadata() async {
-    await video.safeFilePath();
     videoMetadata = await ProVideoEditor.instance.getMetadata(video);
   }
 
   /// Generates thumbnails for the given [video].
   void generateThumbnails() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || (!kIsWeb && (Platform.isLinux || Platform.isWindows))) {
-        thumbnails = [];
-
-        if (proVideoController != null) {
-          proVideoController!.thumbnails = thumbnails;
-        }
-        return;
-      }
+      if (!mounted) return;
       var imageWidth = MediaQuery.sizeOf(context).width /
           thumbnailCount *
           MediaQuery.devicePixelRatioOf(context);
@@ -124,7 +115,7 @@ mixin VideoEditorMixin<T extends StatefulWidget> on State<T> {
       video: video,
       imageBytes: parameters.layers.isNotEmpty ? parameters.image : null,
       blur: parameters.blur,
-      colorMatrixList: [parameters.colorFiltersCombined],
+      colorMatrixList: parameters.colorFilters,
       startTime: parameters.startTime,
       endTime: parameters.endTime,
       transform: parameters.isTransformed
@@ -142,13 +133,7 @@ mixin VideoEditorMixin<T extends StatefulWidget> on State<T> {
       outputFormat: outputFormat,
       bitrate: videoMetadata.bitrate,
     );
-    final directory = await getTemporaryDirectory();
-
-    final now = DateTime.now().millisecondsSinceEpoch;
-    _outputPath = await ProVideoEditor.instance.renderVideoToFile(
-      '${directory.path}/my_video_$now.mp4',
-      exportModel,
-    );
+    exportedVideo = await ProVideoEditor.instance.renderVideo(exportModel);
     videoGenerationTime = stopwatch.elapsed;
   }
 
@@ -159,17 +144,16 @@ mixin VideoEditorMixin<T extends StatefulWidget> on State<T> {
   /// Afterwards, it pops the current editor page.
   void onCloseEditor(EditorMode editorMode) async {
     if (editorMode != EditorMode.main) return Navigator.pop(context);
-    if (_outputPath != null) {
+    if (exportedVideo != null) {
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => PreviewVideo(
-            filePath: _outputPath!,
+            bytes: exportedVideo!,
             generationTime: videoGenerationTime,
           ),
         ),
       );
-      _outputPath = null;
     }
 
     if (mounted) {

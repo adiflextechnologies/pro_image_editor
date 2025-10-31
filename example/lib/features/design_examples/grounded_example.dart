@@ -75,16 +75,6 @@ class _GroundedDesignExampleState extends State<GroundedDesignExample>
             hideToolbarOnInteraction: false,
           ),
           mainEditor: MainEditorConfigs(
-            tools: [
-              SubEditorMode.paint,
-              SubEditorMode.text,
-              SubEditorMode.cropRotate,
-              SubEditorMode.tune,
-              SubEditorMode.filter,
-              SubEditorMode.blur,
-              SubEditorMode.emoji,
-              SubEditorMode.sticker,
-            ],
             widgets: MainEditorWidgets(
               appBar: (editor, rebuildStream) => null,
               bottomBar: (editor, rebuildStream, key) => ReactiveWidget(
@@ -366,6 +356,7 @@ class _GroundedDesignExampleState extends State<GroundedDesignExample>
             ),
           ),
           stickerEditor: StickerEditorConfigs(
+            enabled: true,
             builder: (setLayer, scrollController) => DemoBuildStickers(
                 categoryColor: const Color(0xFF161616),
                 setLayer: setLayer,

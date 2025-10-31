@@ -42,11 +42,7 @@ class _CropToMainEditorExampleState extends State<CropToMainEditorExample>
     cropRotateEditor: const CropRotateEditorConfigs(
       initAspectRatio: 1,
       enableProvideImageInfos: true,
-      tools: [
-        CropRotateTool.rotate,
-        CropRotateTool.flip,
-        CropRotateTool.reset,
-      ],
+      showAspectRatioButton: false,
     ),
   );
 
@@ -94,15 +90,9 @@ class _CropToMainEditorExampleState extends State<CropToMainEditorExample>
                 transformConfigs: transformations,
                 imageInfos: imageInfos,
               ),
-              tools: [
-                SubEditorMode.paint,
-                SubEditorMode.text,
-                // SubEditorMode.cropRotate,
-                SubEditorMode.tune,
-                SubEditorMode.filter,
-                SubEditorMode.blur,
-                SubEditorMode.emoji,
-              ],
+            ),
+            cropRotateEditor: const CropRotateEditorConfigs(
+              enabled: false,
             ),
           ),
         ),

@@ -59,20 +59,12 @@ class _StickersExampleState extends State<StickersExample>
       ),
       configs: ProImageEditorConfigs(
         designMode: platformDesignMode,
+        blurEditor: const BlurEditorConfigs(enabled: false),
         mainEditor: MainEditorConfigs(
-          tools: [
-            SubEditorMode.paint,
-            SubEditorMode.text,
-            SubEditorMode.cropRotate,
-            SubEditorMode.tune,
-            SubEditorMode.filter,
-            // SubEditorMode.blur,
-            SubEditorMode.emoji,
-            SubEditorMode.sticker,
-          ],
           enableCloseButton: !isDesktopMode(context),
         ),
         stickerEditor: StickerEditorConfigs(
+          enabled: true,
           builder: _buildStickers,
         ),
       ),

@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 // Project imports:
 import '/core/models/editor_configs/pro_image_editor_configs.dart';
 
-/// A [StatelessWidget] that applies transformations to its [child] widget
+/// A [StatefulWidget] that applies transformations to its [child] widget
 /// based on provided transformation and editor configurations.
-class TransformedContentGenerator extends StatelessWidget {
+class TransformedContentGenerator extends StatefulWidget {
   /// Creates an instance of [TransformedContentGenerator] with the given
   /// parameters.
   const TransformedContentGenerator({
@@ -27,77 +27,94 @@ class TransformedContentGenerator extends StatelessWidget {
   /// Configuration object for the image editor.
   final ProImageEditorConfigs configs;
 
-  /// Indicates if the child is a video player.
+  /// Indicateds if the child is a video player.
   final bool isVideoPlayer;
 
-  TransformConfigs get _transformConfigs => transformConfigs;
+  @override
+  State<TransformedContentGenerator> createState() =>
+      _TransformedContentGeneratorState();
+}
 
-  double _computeFitHelper(Size size) {
-    final tc = _transformConfigs;
-    if (tc.cropEditorScreenRatio == 0) return 1.0;
-
-    final Size orig = tc.originalSize;
-    final Rect crop = tc.cropRect;
-    final bool rot90 = tc.is90DegRotated;
-
-    final double origRatio = orig.aspectRatio;
-    final double cropRatio = crop.size.aspectRatio;
-    final double convertedCropRatio = rot90 ? 1 / cropRatio : cropRatio;
-
-    final bool origFitW = size.aspectRatio <= origRatio;
-    final bool fitW = size.aspectRatio <= convertedCropRatio;
-
-    final double w = orig.width / crop.width;
-    final double h = orig.height / crop.height;
-    final double w1 = size.width / orig.width;
-    final double h1 = size.height / orig.height;
-
-    double helper;
-    if (!origFitW && fitW) {
-      helper = w1 / h1;
-    } else if (origFitW && !fitW) {
-      helper = h1 / w1;
-    } else if (!fitW && cropRatio > origRatio) {
-      helper = h / w;
-    } else if (fitW && cropRatio < origRatio) {
-      helper = w / h;
-    } else {
-      helper = 1.0;
-    }
-
-    if (rot90) {
-      if (origFitW && fitW) {
-        helper *= cropRatio;
-      } else if (!origFitW && !fitW) {
-        helper /= cropRatio;
-      } else {
-        final bool useOrig = (origFitW && cropRatio > origRatio) ||
-            (!origFitW && cropRatio < origRatio);
-        helper = fitW
-            ? helper * (useOrig ? origRatio : cropRatio)
-            : helper / (useOrig ? origRatio : cropRatio);
-      }
-    }
-    return helper;
-  }
-
+class _TransformedContentGeneratorState
+    extends State<TransformedContentGenerator> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final Size size = constraints.biggest;
-        final double fitFactor = _computeFitHelper(size);
-        final Size originalSize = _transformConfigs.originalSize;
+        TransformConfigs configs = widget.transformConfigs;
+        Size size = constraints.biggest;
+
+        double fitHelper = 1;
+
+        if (configs.cropEditorScreenRatio != 0) {
+          Size originalImageSize = configs.originalSize;
+
+          double originalImageRatio = originalImageSize.aspectRatio;
+          double cropRectRatio = configs.cropRect.size.aspectRatio;
+
+          bool is90DegRotated = configs.is90DegRotated;
+          double convertedCropRectRatio =
+              !is90DegRotated ? cropRectRatio : (1 / cropRectRatio);
+
+          bool originalFitToWidth = size.aspectRatio <= originalImageRatio;
+          bool fitToWidth = size.aspectRatio <= convertedCropRectRatio;
+
+          double w = originalImageSize.width / configs.cropRect.width;
+          double h = originalImageSize.height / configs.cropRect.height;
+
+          double w1 = size.width / originalImageSize.width;
+          double h1 = size.height / originalImageSize.height;
+
+          if (!originalFitToWidth && fitToWidth) {
+            fitHelper = w1 / h1;
+          } else if (originalFitToWidth && !fitToWidth) {
+            fitHelper = h1 / w1;
+          } else if (!fitToWidth && cropRectRatio > originalImageRatio) {
+            fitHelper = h / w;
+          } else if (fitToWidth && cropRectRatio < originalImageRatio) {
+            fitHelper = w / h;
+          }
+
+          if (is90DegRotated) {
+            if (originalFitToWidth && fitToWidth) {
+              fitHelper *= cropRectRatio;
+            } else if (!originalFitToWidth && !fitToWidth) {
+              fitHelper /= cropRectRatio;
+            } else {
+              bool useOriginalImageSize = (originalFitToWidth &&
+                      cropRectRatio > originalImageRatio) ||
+                  (!originalFitToWidth && cropRectRatio < originalImageRatio);
+
+              if (fitToWidth) {
+                fitHelper *=
+                    useOriginalImageSize ? originalImageRatio : cropRectRatio;
+              } else {
+                fitHelper /=
+                    useOriginalImageSize ? originalImageRatio : cropRectRatio;
+              }
+            }
+          }
+        }
 
         return FittedBox(
           child: SizedBox(
-            width: originalSize.isInfinite ? null : originalSize.width,
-            height: originalSize.isInfinite ? null : originalSize.height,
-            child: _buildFitRotateFlip(
-              fitFactor: fitFactor,
-              child: _buildCropPainter(
-                child: _buildScaleRotate(
-                  child: child,
+            width: configs.originalSize.isInfinite
+                ? null
+                : configs.originalSize.width,
+            height: configs.originalSize.isInfinite
+                ? null
+                : configs.originalSize.height,
+            child: Transform.scale(
+              scale: fitHelper,
+              child: _buildRotationTransform(
+                child: _buildFlipTransform(
+                  child: _buildCropPainter(
+                    child: _buildUserScaleTransform(
+                      child: _buildTranslate(
+                        child: widget.child,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -107,40 +124,27 @@ class TransformedContentGenerator extends StatelessWidget {
     );
   }
 
-  Widget _buildFitRotateFlip(
-      {required Widget child, required double fitFactor}) {
-    if (fitFactor == 1 &&
-        _transformConfigs.angle == 0 &&
-        !_transformConfigs.flipX &&
-        !_transformConfigs.flipY) {
-      return child;
-    }
-
-    /// Compose flip, rotate & fitHelper scale into one matrix:
-    final Matrix4 outerMatrix = Matrix4.identity()
-      // fitHelper
-      ..scaleByDouble(fitFactor, fitFactor, fitFactor, 1.0)
-      // rotation
-      ..rotateZ(_transformConfigs.angle)
-      ..scaleByDouble(
-          // flip X
-          _transformConfigs.flipX ? -1.0 : 1.0,
-          // flip Y
-          _transformConfigs.flipY ? -1.0 : 1.0,
-          1.0,
-          1.0);
-
-    return Transform(
+  Transform _buildRotationTransform({required Widget child}) {
+    return Transform.rotate(
+      angle: widget.transformConfigs.angle,
       alignment: Alignment.center,
-      transform: outerMatrix,
+      child: child,
+    );
+  }
+
+  Transform _buildFlipTransform({required Widget child}) {
+    return Transform.flip(
+      flipX: widget.transformConfigs.flipX,
+      flipY: widget.transformConfigs.flipY,
       child: child,
     );
   }
 
   Widget _buildCropPainter({required Widget child}) {
-    if (kIsWeb && isVideoPlayer) return child;
+    // TODO: Add support for web video player
+    if (kIsWeb && widget.isVideoPlayer) return child;
 
-    CropMode cropMode = _transformConfigs.cropMode;
+    CutOutsideArea clipper = CutOutsideArea(configs: widget.transformConfigs);
 
     if (widget.configs.cropRotateEditor.enableRoundCropper) {
       return ClipOval(clipper: clipper, child: child);
@@ -149,47 +153,19 @@ class TransformedContentGenerator extends StatelessWidget {
     }
   }
 
-  Widget _buildScaleRotate({required Widget child}) {
-    final offset = _transformConfigs.offset;
-    final scale = _transformConfigs.scaleUser;
-
-    // If no pan *and* no scale, just return child
-    if (offset == Offset.zero && scale == 1.0) {
-      return child;
-    }
-
-    // Combine translate + scale into one matrix
-    final matrix = Matrix4.identity()
-      ..scaleByDouble(scale, scale, scale, 1.0)
-      ..translateByDouble(offset.dx, offset.dy, 0.0, 1.0);
-
-    return Transform(
+  Transform _buildUserScaleTransform({required Widget child}) {
+    return Transform.scale(
+      scale: widget.transformConfigs.scaleUser,
       alignment: Alignment.center,
-      transform: matrix,
       child: child,
     );
   }
 
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-
-    properties
-      ..add(DiagnosticsProperty<TransformConfigs>(
-          'transformConfigs', transformConfigs))
-      ..add(FlagProperty('isVideoPlayer',
-          value: isVideoPlayer, ifTrue: 'video player'))
-      ..add(DoubleProperty('angle', transformConfigs.angle))
-      ..add(FlagProperty('flipX',
-          value: transformConfigs.flipX, ifTrue: 'flipped X'))
-      ..add(FlagProperty('flipY',
-          value: transformConfigs.flipY, ifTrue: 'flipped Y'))
-      ..add(DoubleProperty('scaleUser', transformConfigs.scaleUser))
-      ..add(DiagnosticsProperty<Offset>('offset', transformConfigs.offset))
-      ..add(EnumProperty<CropMode>('cropMode', transformConfigs.cropMode))
-      ..add(DiagnosticsProperty<Rect>('cropRect', transformConfigs.cropRect))
-      ..add(DiagnosticsProperty<Size>(
-          'originalSize', transformConfigs.originalSize));
+  Transform _buildTranslate({required Widget child}) {
+    return Transform.translate(
+      offset: widget.transformConfigs.offset,
+      child: child,
+    );
   }
 }
 

@@ -187,7 +187,6 @@ class EmojiEditorState extends State<EmojiEditor>
   @override
   Widget build(BuildContext context) {
     return ExtendedPopScope(
-      canPop: emojiEditorConfigs.enableGesturePop,
       child: SafeArea(
         child: _buildEmojiPicker(),
       ),

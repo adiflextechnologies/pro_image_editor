@@ -33,12 +33,7 @@ abstract class CensorAreaItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        /// Important to absorb events here as there is no hitTesting which
-        /// will absorb it.
-      },
+    return RepaintBoundary(
       child: _buildClipper(
         child: buildBackdropFilter(
           context: context,

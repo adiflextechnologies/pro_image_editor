@@ -1,6 +1,3 @@
-// ignore_for_file: deprecated_member_use_from_same_package
-// TODO: Remove the deprecated values when releasing version 12.0.0.
-
 // Flutter imports:
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -58,16 +55,12 @@ class _FrostedGlassStickerPageState extends State<FrostedGlassStickerPage> {
   late TextEditingController _searchCtrl;
   late FocusNode _searchFocus;
 
-  late final bool _isStickerEditorEnabled =
-      widget.configs.stickerEditor.enabled &&
-          widget.configs.mainEditor.tools.contains(SubEditorMode.sticker);
-
   @override
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController();
     _searchFocus = FocusNode();
-    if (!_isStickerEditorEnabled) {
+    if (!widget.configs.emojiEditor.enabled) {
       temporaryStickerMode = FrostedGlassStickerMode.sticker;
     }
   }
@@ -102,7 +95,7 @@ class _FrostedGlassStickerPageState extends State<FrostedGlassStickerPage> {
                         configs: widget.configs,
                       ),
                     ),
-                    if (_isStickerEditorEnabled)
+                    if (widget.configs.stickerEditor.enabled)
                       Offstage(
                         offstage: temporaryStickerMode !=
                             FrostedGlassStickerMode.sticker,
@@ -187,7 +180,7 @@ class _FrostedGlassStickerPageState extends State<FrostedGlassStickerPage> {
                         color: Colors.white,
                       ),
                     ),
-                    if (_isStickerEditorEnabled)
+                    if (widget.configs.stickerEditor.enabled)
                       Align(
                         alignment: Alignment.center,
                         child: SegmentedButton(

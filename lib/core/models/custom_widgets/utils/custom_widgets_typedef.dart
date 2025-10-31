@@ -62,7 +62,6 @@ typedef RemoveLayerArea = Widget Function(
   GlobalKey removeAreaKey,
   ProImageEditorState editor,
   Stream<void> rebuildStream,
-  bool isLayerBeingTransformed,
 );
 
 /// A typedef for creating a [ReactiveWidget] that manages crop editor

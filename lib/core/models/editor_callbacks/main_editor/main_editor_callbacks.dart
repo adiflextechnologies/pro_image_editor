@@ -31,7 +31,6 @@ class MainEditorCallbacks extends StandaloneEditorCallbacks {
     this.onEscapeButton,
     this.helperLines = const HelperLinesCallbacks(),
     this.onSelectedLayerChanged,
-    this.onSelectedLayersChanged,
     this.onEditorZoomMatrix4Change,
     super.onInit,
     super.onAfterViewInit,
@@ -216,15 +215,7 @@ class MainEditorCallbacks extends StandaloneEditorCallbacks {
   /// layer is selected, the callback is called with blank.
   ///
   /// This callback is not called when [LayerInteractionSelectable] is disabled.
-  final Function(String value)? onSelectedLayerChanged;
-
-  /// A callback that is triggered when the set of selected layers changes.
-  ///
-  /// Called with the updated set of selected layer IDs.
-  ///
-  /// This callback is **not triggered** when [LayerInteractionSelectable] is
-  /// disabled.
-  final Function(Set<String> value)? onSelectedLayersChanged;
+  final ValueChanged<String>? onSelectedLayerChanged;
 
   /// Handles the addition of a layer.
   ///
@@ -336,8 +327,7 @@ class MainEditorCallbacks extends StandaloneEditorCallbacks {
     Function(Matrix4 value)? onEditorZoomMatrix4Change,
     PopInvokedWithResultCallback<dynamic>? onPopInvoked,
     HelperLinesCallbacks? helperLines,
-    Function(String value)? onSelectedLayerChanged,
-    Function(Set<String> value)? onSelectedLayersChanged,
+    ValueChanged<String>? onSelectedLayerChanged,
     Function()? onInit,
     Function()? onAfterViewInit,
     Function()? onUpdateUI,
@@ -371,8 +361,6 @@ class MainEditorCallbacks extends StandaloneEditorCallbacks {
       helperLines: helperLines ?? this.helperLines,
       onSelectedLayerChanged:
           onSelectedLayerChanged ?? this.onSelectedLayerChanged,
-      onSelectedLayersChanged:
-          onSelectedLayersChanged ?? this.onSelectedLayersChanged,
       onInit: onInit ?? this.onInit,
       onAfterViewInit: onAfterViewInit ?? this.onAfterViewInit,
       onUpdateUI: onUpdateUI ?? this.onUpdateUI,

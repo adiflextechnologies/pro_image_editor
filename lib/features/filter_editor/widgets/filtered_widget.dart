@@ -2,7 +2,6 @@
 import 'dart:ui';
 
 // Flutter imports:
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 // Project imports:
@@ -27,11 +26,9 @@ class FilteredWidget extends StatelessWidget {
     this.filterKey,
     this.fit = BoxFit.contain,
     this.image,
-    this.blankSize,
     this.videoPlayer,
-    this.enableCachedSize = false,
-  }) : assert(image != null || videoPlayer != null || blankSize != null,
-            'Image or videoPlayer or blankSize cannot be null');
+  }) : assert(image != null || videoPlayer != null,
+            'Image and video player cannot be null');
 
   /// A key that uniquely identifies the [ColorFilterGeneratorState] widget and
   /// allows access to its state. This can be used to manipulate the state of
@@ -64,15 +61,8 @@ class FilteredWidget extends StatelessWidget {
   /// How the image should be inscribed into the space allocated for it.
   final BoxFit fit;
 
-  /// The size of the blank canvas when no image is present.
-  final Size? blankSize;
-
   /// The blur factor
   final double blurFactor;
-
-  /// Indicate to the engine that the image must be decoded at the specified
-  /// size.
-  final bool enableCachedSize;
 
   @override
   Widget build(BuildContext context) {
@@ -84,61 +74,49 @@ class FilteredWidget extends StatelessWidget {
         fit: StackFit.expand,
         alignment: Alignment.center,
         children: [
+          _buildContent(),
           ColorFilterGenerator(
             key: filterKey,
             filters: filters,
             tuneAdjustments: tuneAdjustments,
             child: _buildContent(),
           ),
-          if (blurFactor > 0) _buildBlur(),
+          ClipRect(
+            clipBehavior: Clip.hardEdge,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurFactor, sigmaY: blurFactor),
+              child: Container(
+                width: width,
+                height: height,
+                alignment: Alignment.center,
+                color: Colors.white.withValues(alpha: 0.0),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBlur() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurFactor, sigmaY: blurFactor),
-        child: SizedBox(
-          width: width,
-          height: height,
-        ),
-      ),
+  Widget _buildContent() {
+    if (videoPlayer == null) {
+      return _buildImage();
+    } else {
+      return _buildVideo();
+    }
+  }
+
+  Widget _buildImage() {
+    return AutoImage(
+      image!,
+      fit: fit,
+      width: width,
+      height: height,
+      configs: configs,
     );
   }
 
-  Widget _buildContent() {
-    if (videoPlayer != null) return videoPlayer!;
-    if (image != null) {
-      return AutoImage(
-        image!,
-        enableCachedSize: enableCachedSize,
-        fit: fit,
-        width: width,
-        height: height,
-        configs: configs,
-      );
-    }
-    return SizedBox.fromSize(size: blankSize);
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-
-    properties
-      ..add(DoubleProperty('width', width))
-      ..add(DoubleProperty('height', height))
-      ..add(DiagnosticsProperty<FilterMatrix>('filters', filters))
-      ..add(IterableProperty<TuneAdjustmentMatrix>(
-          'tuneAdjustments', tuneAdjustments))
-      ..add(DoubleProperty('blurFactor', blurFactor))
-      ..add(EnumProperty<BoxFit>('fit', fit))
-      ..add(FlagProperty('enableCachedSize',
-          value: enableCachedSize, ifTrue: 'cached size enabled'))
-      ..add(DiagnosticsProperty<EditorImage?>('image', image))
-      ..add(FlagProperty('hasVideoPlayer',
-          value: videoPlayer != null, ifTrue: 'video player set'));
+  Widget _buildVideo() {
+    return videoPlayer!;
   }
 }

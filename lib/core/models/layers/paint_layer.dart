@@ -1,13 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '/core/constants/int_constants.dart';
 import '/features/paint_editor/models/painted_model.dart';
-import '/shared/extensions/num_extension.dart';
 import '/shared/services/import_export/utils/key_minifier.dart';
 import '/shared/utils/parser/double_parser.dart';
 import 'layer.dart';
-import 'layer_interaction.dart';
 
 /// A class representing a layer with custom paint content.
 ///
@@ -42,10 +38,9 @@ class PaintLayer extends Layer {
     super.flipX,
     super.flipY,
     super.interaction,
+    super.isDeleted,
     super.meta,
     super.boxConstraints,
-    super.key,
-    super.groupId,
   });
 
   /// Factory constructor for creating a PaintLayer instance from a
@@ -67,8 +62,8 @@ class PaintLayer extends Layer {
       offset: layer.offset,
       rotation: layer.rotation,
       scale: layer.scale,
+      isDeleted: layer.isDeleted,
       meta: layer.meta,
-      groupId: layer.groupId,
       opacity: safeParseDouble(map[keyConverter('opacity')], fallback: 1.0),
       rawSize: Size(
         safeParseDouble(map[keyConverter('rawSize')]?['w'], fallback: 0),
@@ -94,100 +89,31 @@ class PaintLayer extends Layer {
   Size get size => Size(rawSize.width * scale, rawSize.height * scale);
 
   @override
-  bool get isPaintLayer => true;
-
-  @override
-  Map<String, dynamic> toMap({
-    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMap() {
     return {
-      ...super.toMap(
-        maxDecimalPlaces: maxDecimalPlaces,
-        enableMinify: enableMinify,
-      ),
-      'item': item.toMap(
-        maxDecimalPlaces: maxDecimalPlaces,
-        enableMinify: enableMinify,
-      ),
+      ...super.toMap(),
+      'item': item.toMap(),
       'rawSize': {
-        'w': rawSize.width.roundSmart(maxDecimalPlaces),
-        'h': rawSize.height.roundSmart(maxDecimalPlaces),
+        'w': rawSize.width,
+        'h': rawSize.height,
       },
-      'opacity': opacity.roundSmart(maxDecimalPlaces),
+      'opacity': opacity,
       'type': 'paint',
     };
   }
 
   @override
-  Map<String, dynamic> toMapFromReference(
-    Layer layer, {
-    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMapFromReference(Layer layer) {
     var paintLayer = layer as PaintLayer;
     return {
-      ...super.toMapFromReference(
-        layer,
-        maxDecimalPlaces: maxDecimalPlaces,
-        enableMinify: enableMinify,
-      ),
-      if (paintLayer.item != item)
-        'item': item.toMap(
-          maxDecimalPlaces: maxDecimalPlaces,
-          enableMinify: enableMinify,
-        ),
+      ...super.toMapFromReference(layer),
+      if (paintLayer.item != item) 'item': item.toMap(),
       if (paintLayer.rawSize != rawSize)
         'rawSize': {
-          'w': rawSize.width.roundSmart(maxDecimalPlaces),
-          'h': rawSize.height.roundSmart(maxDecimalPlaces),
+          'w': rawSize.width,
+          'h': rawSize.height,
         },
       if (paintLayer.opacity != opacity) 'opacity': opacity,
     };
-  }
-
-  /// Creates a copy of this [PaintLayer] with the given fields replaced with
-  /// new values.
-  @override
-  PaintLayer copyWith({
-    PaintedModel? item,
-    Size? rawSize,
-    double? opacity,
-    Offset? offset,
-    double? rotation,
-    double? scale,
-    bool? flipX,
-    bool? flipY,
-    LayerInteraction? interaction,
-    Map<String, dynamic>? meta,
-    BoxConstraints? boxConstraints,
-    String? id,
-    String? groupId,
-  }) {
-    return PaintLayer(
-      item: item ?? this.item,
-      rawSize: rawSize ?? this.rawSize,
-      opacity: opacity ?? this.opacity,
-      offset: offset ?? this.offset,
-      rotation: rotation ?? this.rotation,
-      scale: scale ?? this.scale,
-      id: id ?? this.id,
-      flipX: flipX ?? this.flipX,
-      flipY: flipY ?? this.flipY,
-      interaction: interaction ?? this.interaction,
-      meta: meta ?? this.meta,
-      boxConstraints: boxConstraints ?? this.boxConstraints,
-      groupId: groupId ?? this.groupId,
-    );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties
-      ..add(DoubleProperty('opacity', opacity))
-      ..add(DiagnosticsProperty<Size>('rawSize', rawSize))
-      ..add(DiagnosticsProperty<Size>('size', size));
-    item.debugFillProperties(properties);
   }
 }

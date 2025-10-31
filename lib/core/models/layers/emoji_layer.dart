@@ -1,9 +1,4 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
-
-import '/core/constants/int_constants.dart';
 import 'layer.dart';
-import 'layer_interaction.dart';
 
 /// A class representing a layer with emoji content.
 ///
@@ -33,10 +28,9 @@ class EmojiLayer extends Layer {
     super.flipX,
     super.flipY,
     super.interaction,
+    super.isDeleted,
     super.meta,
     super.boxConstraints,
-    super.key,
-    super.groupId,
   });
 
   /// Factory constructor for creating an EmojiLayer instance from a Layer
@@ -58,8 +52,8 @@ class EmojiLayer extends Layer {
       offset: layer.offset,
       rotation: layer.rotation,
       scale: layer.scale,
+      isDeleted: layer.isDeleted,
       meta: layer.meta,
-      groupId: layer.groupId,
       emoji: map[keyConverter('emoji')],
     );
   }
@@ -68,73 +62,19 @@ class EmojiLayer extends Layer {
   String emoji;
 
   @override
-  bool get isEmojiLayer => true;
-
-  @override
-  Map<String, dynamic> toMap({
-    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMap() {
     return {
-      ...super.toMap(
-        maxDecimalPlaces: maxDecimalPlaces,
-        enableMinify: enableMinify,
-      ),
+      ...super.toMap(),
       'emoji': emoji,
       'type': 'emoji',
     };
   }
 
   @override
-  Map<String, dynamic> toMapFromReference(
-    Layer layer, {
-    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
-    bool enableMinify = false,
-  }) {
+  Map<String, dynamic> toMapFromReference(Layer layer) {
     return {
-      ...super.toMapFromReference(
-        layer,
-        maxDecimalPlaces: maxDecimalPlaces,
-        enableMinify: enableMinify,
-      ),
+      ...super.toMapFromReference(layer),
       if ((layer as EmojiLayer).emoji != emoji) 'emoji': emoji,
     };
-  }
-
-  /// Creates a copy of this [EmojiLayer] with the given fields replaced with
-  /// new values.
-  @override
-  EmojiLayer copyWith({
-    String? emoji,
-    Offset? offset,
-    double? rotation,
-    double? scale,
-    bool? flipX,
-    bool? flipY,
-    LayerInteraction? interaction,
-    Map<String, dynamic>? meta,
-    BoxConstraints? boxConstraints,
-    String? id,
-    String? groupId,
-  }) {
-    return EmojiLayer(
-      emoji: emoji ?? this.emoji,
-      offset: offset ?? this.offset,
-      rotation: rotation ?? this.rotation,
-      scale: scale ?? this.scale,
-      flipX: flipX ?? this.flipX,
-      flipY: flipY ?? this.flipY,
-      interaction: interaction ?? this.interaction,
-      meta: meta ?? this.meta,
-      boxConstraints: boxConstraints ?? this.boxConstraints,
-      id: id ?? this.id,
-      groupId: groupId ?? this.groupId,
-    );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties.add(StringProperty('emoji', emoji));
   }
 }
