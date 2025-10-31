@@ -76,6 +76,7 @@ class PaintController extends ChangeNotifier {
         offsets: mode == PaintMode.freeStyle || mode == PaintMode.polygon
             ? [..._offsets]
             : [start, end],
+        erasedOffsets: [],
         color: color,
         strokeWidth: strokeWidth,
         fill: fill,

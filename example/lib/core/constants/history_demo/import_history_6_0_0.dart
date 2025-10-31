@@ -380,7 +380,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
       'colorMode': 'backgroundAndColor',
       'color': 4281073408,
       'background': 4278190080,
-      'colorPickerPosition': 0.4788571428571428,
       'align': 'center',
       'fontScale': 1.0
     },

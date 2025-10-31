@@ -34,9 +34,261 @@ class _WhatsAppExampleState extends State<WhatsAppExample>
       platformDesignMode == ImageEditorDesignMode.material;
 
   /// Helper class for managing WhatsApp filters.
-  final WhatsAppHelper _whatsAppHelper = WhatsAppHelper();
+  final _whatsAppHelper = WhatsAppHelper();
+  final _captionFocus = FocusNode();
 
   ProImageEditorState? get _editor => editorKey.currentState;
+
+  final List<List<double>> _emptyFilter = [
+    [
+      // Row 1
+      1, 0, 0, 0, 0,
+      // Row 2
+      0, 1, 0, 0, 0,
+      // Row 3
+      0, 0, 1, 0, 0,
+      // Row 4
+      0, 0, 0, 1, 0
+    ]
+  ];
+
+  late final _filters = [
+    FilterModel(name: 'None', filters: _emptyFilter),
+    FilterModel(
+      name: 'Pop',
+      filters: [
+        ColorFilterAddons.colorOverlay(255, 225, 80, 0.08),
+        ColorFilterAddons.saturation(0.1),
+        ColorFilterAddons.contrast(0.05),
+      ],
+    ),
+    FilterModel(
+      name: 'B&W',
+      filters: [
+        ColorFilterAddons.grayscale(),
+        ColorFilterAddons.colorOverlay(100, 28, 210, 0.03),
+        ColorFilterAddons.brightness(0.1),
+      ],
+    ),
+    FilterModel(
+      name: 'Cool',
+      filters: [
+        ColorFilterAddons.addictiveColor(0, 0, 20),
+      ],
+    ),
+    FilterModel(
+      name: 'Chrome',
+      filters: [
+        ColorFilterAddons.contrast(0.15),
+        ColorFilterAddons.saturation(0.2),
+      ],
+    ),
+    FilterModel(
+      name: 'Film',
+      filters: [
+        ColorFilterAddons.brightness(.05),
+        ColorFilterAddons.saturation(-0.03),
+      ],
+    ),
+  ];
+
+  late final _mainEditorConfigs = MainEditorConfigs(
+    enableZoom: true,
+    tools: [
+      SubEditorMode.paint,
+      SubEditorMode.text,
+      SubEditorMode.cropRotate,
+      SubEditorMode.tune,
+      SubEditorMode.filter,
+      SubEditorMode.blur,
+      SubEditorMode.emoji,
+      SubEditorMode.sticker,
+    ],
+    widgets: MainEditorWidgets(
+      appBar: (editor, rebuildStream) => null,
+      bottomBar: (editor, rebuildStream, key) => null,
+      wrapBody: (editor, rebuildStream, content) {
+        return Stack(
+          alignment: Alignment.center,
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            Transform.scale(
+              transformHitTests: false,
+              scale: 1 /
+                  editor.sizesManager.bodySize.height *
+                  (editor.sizesManager.bodySize.height -
+                      _whatsAppHelper.filterShowHelper * 2),
+              child: content,
+            ),
+            if (!editor.isLayerBeingTransformed)
+              ..._buildWhatsAppWidgets(editor),
+          ],
+        );
+      },
+    ),
+  );
+  late final _paintEditorConfigs = PaintEditorConfigs(
+    style: const PaintEditorStyle(
+      initialColor: Color.fromARGB(255, 129, 218, 88),
+      initialStrokeWidth: 5,
+    ),
+    widgets: PaintEditorWidgets(
+      appBar: (paintEditor, rebuildStream) => null,
+      bottomBar: (paintEditor, rebuildStream) => null,
+      colorPicker: (paintEditor, rebuildStream, currentColor, setColor) => null,
+      bodyItems: _buildPaintEditorBody,
+    ),
+  );
+  late final _textEditorConfigs = TextEditorConfigs(
+    customTextStyles: [
+      GoogleFonts.roboto(),
+      GoogleFonts.averiaLibre(),
+      GoogleFonts.lato(),
+      GoogleFonts.comicNeue(),
+      GoogleFonts.actor(),
+      GoogleFonts.odorMeanChey(),
+      GoogleFonts.nabla(),
+    ],
+    widgets: TextEditorWidgets(
+      appBar: (textEditor, rebuildStream) => null,
+      colorPicker: (editor, rebuildStream, currentColor, setColor) => null,
+      bottomBar: (textEditor, rebuildStream) => null,
+      bodyItems: _buildTextEditorBody,
+    ),
+    style: TextEditorStyle(
+        textFieldMargin: EdgeInsets.zero,
+        bottomBarBackground: Colors.transparent,
+        bottomBarMainAxisAlignment: !_useMaterialDesign
+            ? MainAxisAlignment.spaceEvenly
+            : MainAxisAlignment.start),
+  );
+  late final _filterEditorConfigs = FilterEditorConfigs(
+    fadeInUpDuration: Duration.zero,
+    filterList: _filters,
+    widgets: FilterEditorWidgets(
+      filterButton: (
+        filter,
+        isSelected,
+        scaleFactor,
+        onSelectFilter,
+        editorImage,
+        filterKey,
+      ) {
+        return WhatsAppFilterBtn(
+          filter: filter,
+          isSelected: isSelected,
+          onSelectFilter: () {
+            onSelectFilter.call();
+            _editor!.setState(() {});
+          },
+          editorImage: editorImage,
+          filterKey: filterKey,
+          scaleFactor: scaleFactor,
+        );
+      },
+    ),
+    style: const FilterEditorStyle(
+      filterListSpacing: 7,
+      filterListMargin: EdgeInsets.fromLTRB(8, 15, 8, 10),
+    ),
+  );
+  late final _cropEditorConfigs = CropRotateEditorConfigs(
+    enableDoubleTap: false,
+    widgets: CropRotateEditorWidgets(
+      appBar: (cropRotateEditor, rebuildStream) => null,
+      bottomBar: (cropRotateEditor, rebuildStream) => ReactiveWidget(
+        stream: rebuildStream,
+        builder: (_) => WhatsAppCropRotateToolbar(
+          bottomBarColor: const Color(0xFF303030),
+          configs: cropRotateEditor.configs,
+          onCancel: cropRotateEditor.close,
+          onRotate: cropRotateEditor.rotate,
+          onDone: cropRotateEditor.done,
+          onReset: cropRotateEditor.reset,
+          openAspectRatios: cropRotateEditor.openAspectRatioOptions,
+        ),
+      ),
+    ),
+    style: const CropRotateEditorStyle(
+      cropCornerColor: Colors.white,
+      helperLineColor: Colors.white,
+      cropCornerLength: 28,
+      cropCornerThickness: 3,
+    ),
+  );
+  late final _emojiEditorConfigs = EmojiEditorConfigs(
+    checkPlatformCompatibility: !kIsWeb,
+    style: EmojiEditorStyle(
+      backgroundColor: Colors.transparent,
+      textStyle: DefaultEmojiTextStyle.copyWith(
+        fontFamily: !kIsWeb ? null : GoogleFonts.notoColorEmoji().fontFamily,
+        fontSize: _useMaterialDesign ? 48 : 30,
+      ),
+      emojiViewConfig: EmojiViewConfig(
+        gridPadding: EdgeInsets.zero,
+        horizontalSpacing: 0,
+        verticalSpacing: 0,
+        recentsLimit: 40,
+        backgroundColor: Colors.transparent,
+        buttonMode:
+            !_useMaterialDesign ? ButtonMode.CUPERTINO : ButtonMode.MATERIAL,
+        loadingIndicator: const Center(child: CircularProgressIndicator()),
+        columns: _calculateEmojiColumns(),
+        emojiSizeMax: !_useMaterialDesign ? 32 : 64,
+        replaceEmojiOnLimitExceed: false,
+      ),
+      bottomActionBarConfig: const BottomActionBarConfig(enabled: false),
+    ),
+  );
+  late final _stickerEditorConfigs = StickerEditorConfigs(
+    builder: (setLayer, scrollController) => DemoBuildStickers(
+        setLayer: setLayer, scrollController: scrollController),
+  );
+  late final _layerInteractionConfigs = const LayerInteractionConfigs(
+    enableLayerDragSelection: false,
+    style: LayerInteractionStyle(
+      removeAreaBackgroundInactive: Colors.black12,
+    ),
+  );
+  late final _helperLineConfigs = const HelperLineConfigs(
+    style: HelperLineStyle(
+      horizontalColor: Color.fromARGB(255, 129, 218, 88),
+      verticalColor: Color.fromARGB(255, 129, 218, 88),
+    ),
+  );
+
+  late final _configs = ProImageEditorConfigs(
+    designMode: platformDesignMode,
+    mainEditor: _mainEditorConfigs,
+    paintEditor: _paintEditorConfigs,
+    textEditor: _textEditorConfigs,
+    cropRotateEditor: _cropEditorConfigs,
+    filterEditor: _filterEditorConfigs,
+    emojiEditor: _emojiEditorConfigs,
+    stickerEditor: _stickerEditorConfigs,
+    layerInteraction: _layerInteractionConfigs,
+    helperLines: _helperLineConfigs,
+  );
+  late final _callbacks = ProImageEditorCallbacks(
+      onImageEditingStarted: onImageEditingStarted,
+      onImageEditingComplete: onImageEditingComplete,
+      onCloseEditor: (editorMode) => onCloseEditor(editorMode: editorMode),
+      mainEditorCallbacks: MainEditorCallbacks(
+        helperLines: HelperLinesCallbacks(onLineHit: vibrateLineHit),
+        onScaleStart: _whatsAppHelper.onScaleStart,
+        onScaleUpdate: (details) {
+          _whatsAppHelper.onScaleUpdate(details, _editor!);
+        },
+        onScaleEnd: (details) => _whatsAppHelper.onScaleEnd(details, _editor!),
+        onTap: () => FocusScope.of(context).unfocus(),
+      ),
+      stickerEditorCallbacks: StickerEditorCallbacks(
+        onSearchChanged: (value) {
+          /// Filter your stickers
+          debugPrint(value);
+        },
+      ));
 
   /// Opens the WhatsApp sticker editor.
   ///
@@ -108,269 +360,27 @@ class _WhatsAppExampleState extends State<WhatsAppExample>
   }
 
   /// Calculates the number of columns for the EmojiPicker.
-  int _calculateEmojiColumns(BoxConstraints constraints) =>
-      max(1, (_useMaterialDesign ? 6 : 10) / 400 * constraints.maxWidth - 1)
-          .floor();
+  int _calculateEmojiColumns() => max(
+          1,
+          (_useMaterialDesign ? 6 : 10) /
+                  400 *
+                  MediaQuery.sizeOf(context).width -
+              1)
+      .floor();
+
+  @override
+  void dispose() {
+    _captionFocus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return ProImageEditor.network(
-          widget.url,
-          key: editorKey,
-          callbacks: ProImageEditorCallbacks(
-              onImageEditingStarted: onImageEditingStarted,
-              onImageEditingComplete: onImageEditingComplete,
-              onCloseEditor: (editorMode) =>
-                  onCloseEditor(editorMode: editorMode),
-              mainEditorCallbacks: MainEditorCallbacks(
-                helperLines: HelperLinesCallbacks(onLineHit: vibrateLineHit),
-                onScaleStart: _whatsAppHelper.onScaleStart,
-                onScaleUpdate: (details) {
-                  _whatsAppHelper.onScaleUpdate(details, _editor!);
-                },
-                onScaleEnd: (details) =>
-                    _whatsAppHelper.onScaleEnd(details, _editor!),
-                onTap: () => FocusScope.of(context).unfocus(),
-              ),
-              stickerEditorCallbacks: StickerEditorCallbacks(
-                onSearchChanged: (value) {
-                  /// Filter your stickers
-                  debugPrint(value);
-                },
-              )),
-          configs: ProImageEditorConfigs(
-              designMode: platformDesignMode,
-              mainEditor: MainEditorConfigs(
-                widgets: MainEditorWidgets(
-                  appBar: (editor, rebuildStream) => null,
-                  bottomBar: (editor, rebuildStream, key) => null,
-                  wrapBody: (editor, rebuildStream, content) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      fit: StackFit.expand,
-                      clipBehavior: Clip.none,
-                      children: [
-                        Transform.scale(
-                          transformHitTests: false,
-                          scale: 1 /
-                              constraints.maxHeight *
-                              (constraints.maxHeight -
-                                  _whatsAppHelper.filterShowHelper * 2),
-                          child: content,
-                        ),
-                        if (editor.selectedLayerIndex < 0)
-                          ..._buildWhatsAppWidgets(editor),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              paintEditor: PaintEditorConfigs(
-                style: const PaintEditorStyle(
-                  initialColor: Color.fromARGB(255, 129, 218, 88),
-                  initialStrokeWidth: 5,
-                ),
-                widgets: PaintEditorWidgets(
-                  appBar: (paintEditor, rebuildStream) => null,
-                  bottomBar: (paintEditor, rebuildStream) => null,
-                  colorPicker:
-                      (paintEditor, rebuildStream, currentColor, setColor) =>
-                          null,
-                  bodyItems: _buildPaintEditorBody,
-                ),
-              ),
-              textEditor: TextEditorConfigs(
-                customTextStyles: [
-                  GoogleFonts.roboto(),
-                  GoogleFonts.averiaLibre(),
-                  GoogleFonts.lato(),
-                  GoogleFonts.comicNeue(),
-                  GoogleFonts.actor(),
-                  GoogleFonts.odorMeanChey(),
-                  GoogleFonts.nabla(),
-                ],
-                widgets: TextEditorWidgets(
-                  appBar: (textEditor, rebuildStream) => null,
-                  colorPicker:
-                      (editor, rebuildStream, currentColor, setColor) => null,
-                  bottomBar: (textEditor, rebuildStream) => null,
-                  bodyItems: _buildTextEditorBody,
-                ),
-                style: TextEditorStyle(
-                    textFieldMargin: EdgeInsets.zero,
-                    bottomBarBackground: Colors.transparent,
-                    bottomBarMainAxisAlignment: !_useMaterialDesign
-                        ? MainAxisAlignment.spaceEvenly
-                        : MainAxisAlignment.start),
-              ),
-              cropRotateEditor: CropRotateEditorConfigs(
-                enableDoubleTap: false,
-                widgets: CropRotateEditorWidgets(
-                  appBar: (cropRotateEditor, rebuildStream) => null,
-                  bottomBar: (cropRotateEditor, rebuildStream) =>
-                      ReactiveWidget(
-                    stream: rebuildStream,
-                    builder: (_) => WhatsAppCropRotateToolbar(
-                      bottomBarColor: const Color(0xFF303030),
-                      configs: cropRotateEditor.configs,
-                      onCancel: cropRotateEditor.close,
-                      onRotate: cropRotateEditor.rotate,
-                      onDone: cropRotateEditor.done,
-                      onReset: cropRotateEditor.reset,
-                      openAspectRatios: cropRotateEditor.openAspectRatioOptions,
-                    ),
-                  ),
-                ),
-                style: const CropRotateEditorStyle(
-                  cropCornerColor: Colors.white,
-                  helperLineColor: Colors.white,
-                  cropCornerLength: 28,
-                  cropCornerThickness: 3,
-                ),
-              ),
-              filterEditor: FilterEditorConfigs(
-                fadeInUpDuration: Duration.zero,
-                filterList: [
-                  const FilterModel(
-                    name: 'None',
-                    filters: [
-                      [
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0
-                      ]
-                    ],
-                  ),
-                  FilterModel(
-                    name: 'Pop',
-                    filters: [
-                      ColorFilterAddons.colorOverlay(255, 225, 80, 0.08),
-                      ColorFilterAddons.saturation(0.1),
-                      ColorFilterAddons.contrast(0.05),
-                    ],
-                  ),
-                  FilterModel(
-                    name: 'B&W',
-                    filters: [
-                      ColorFilterAddons.grayscale(),
-                      ColorFilterAddons.colorOverlay(100, 28, 210, 0.03),
-                      ColorFilterAddons.brightness(0.1),
-                    ],
-                  ),
-                  FilterModel(
-                    name: 'Cool',
-                    filters: [
-                      ColorFilterAddons.addictiveColor(0, 0, 20),
-                    ],
-                  ),
-                  FilterModel(
-                    name: 'Chrome',
-                    filters: [
-                      ColorFilterAddons.contrast(0.15),
-                      ColorFilterAddons.saturation(0.2),
-                    ],
-                  ),
-                  FilterModel(
-                    name: 'Film',
-                    filters: [
-                      ColorFilterAddons.brightness(.05),
-                      ColorFilterAddons.saturation(-0.03),
-                    ],
-                  ),
-                ],
-                widgets: FilterEditorWidgets(
-                  filterButton: (
-                    filter,
-                    isSelected,
-                    scaleFactor,
-                    onSelectFilter,
-                    editorImage,
-                    filterKey,
-                  ) {
-                    return WhatsAppFilterBtn(
-                      filter: filter,
-                      isSelected: isSelected,
-                      onSelectFilter: () {
-                        onSelectFilter.call();
-                        _editor!.setState(() {});
-                      },
-                      editorImage: editorImage,
-                      filterKey: filterKey,
-                      scaleFactor: scaleFactor,
-                    );
-                  },
-                ),
-                style: const FilterEditorStyle(
-                  filterListSpacing: 7,
-                  filterListMargin: EdgeInsets.fromLTRB(8, 15, 8, 10),
-                ),
-              ),
-              emojiEditor: EmojiEditorConfigs(
-                checkPlatformCompatibility: !kIsWeb,
-                style: EmojiEditorStyle(
-                  backgroundColor: Colors.transparent,
-                  textStyle: DefaultEmojiTextStyle.copyWith(
-                    fontFamily: !kIsWeb
-                        ? null
-                        : GoogleFonts.notoColorEmoji().fontFamily,
-                    fontSize: _useMaterialDesign ? 48 : 30,
-                  ),
-                  emojiViewConfig: EmojiViewConfig(
-                    gridPadding: EdgeInsets.zero,
-                    horizontalSpacing: 0,
-                    verticalSpacing: 0,
-                    recentsLimit: 40,
-                    backgroundColor: Colors.transparent,
-                    buttonMode: !_useMaterialDesign
-                        ? ButtonMode.CUPERTINO
-                        : ButtonMode.MATERIAL,
-                    loadingIndicator:
-                        const Center(child: CircularProgressIndicator()),
-                    columns: _calculateEmojiColumns(constraints),
-                    emojiSizeMax: !_useMaterialDesign ? 32 : 64,
-                    replaceEmojiOnLimitExceed: false,
-                  ),
-                  bottomActionBarConfig:
-                      const BottomActionBarConfig(enabled: false),
-                ),
-              ),
-              stickerEditor: StickerEditorConfigs(
-                enabled: true,
-                builder: (setLayer, scrollController) => DemoBuildStickers(
-                    setLayer: setLayer, scrollController: scrollController),
-              ),
-              layerInteraction: const LayerInteractionConfigs(
-                style: LayerInteractionStyle(
-                  removeAreaBackgroundInactive: Colors.black12,
-                ),
-              ),
-              helperLines: const HelperLineConfigs(
-                style: HelperLineStyle(
-                  horizontalColor: Color.fromARGB(255, 129, 218, 88),
-                  verticalColor: Color.fromARGB(255, 129, 218, 88),
-                ),
-              )),
-        );
-      },
+    return ProImageEditor.network(
+      widget.url,
+      key: editorKey,
+      callbacks: _callbacks,
+      configs: _configs,
     );
   }
 
@@ -484,40 +494,45 @@ class _WhatsAppExampleState extends State<WhatsAppExample>
           opacity: opacity,
         ),
       _buildDemoSendArea(editor, opacity),
-      WhatsappFilters(editor: editor, whatsAppHelper: _whatsAppHelper)
+      WhatsappFilters(
+        editor: editor,
+        whatsAppHelper: _whatsAppHelper,
+        emptyFilter: _emptyFilter,
+      ),
     ];
   }
 
-  Widget _buildDemoSendArea(
-    ProImageEditorState editor,
-    double opacity,
-  ) {
+  Widget _buildDemoSendArea(ProImageEditorState editor, double opacity) {
     return Positioned(
-      bottom: 0,
+      bottom: MediaQuery.viewInsetsOf(context).bottom,
       left: 0,
       right: 0,
-      child: Opacity(
-        opacity: opacity,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 7, 16, 12),
-                    child: TextField(
-                      textAlignVertical: TextAlignVertical.center,
-                      decoration: InputDecoration(
-                        filled: true,
-                        isDense: true,
-                        prefixIcon: const Padding(
-                          padding: EdgeInsets.only(left: 7.0),
-                          child: Icon(
-                            Icons.add_photo_alternate_rounded,
-                            size: 24,
-                            color: Colors.white,
-                          ),
+      child: GestureInterceptor(
+        child: Opacity(
+          opacity: opacity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 7, 16, 12),
+                  child: TextField(
+                    focusNode: _captionFocus,
+                    textAlignVertical: TextAlignVertical.center,
+                    onTap: () {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _captionFocus.requestFocus();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      filled: true,
+                      isDense: true,
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(left: 7.0),
+                        child: Icon(
+                          Icons.add_photo_alternate_rounded,
+                          size: 24,
+                          color: Colors.white,
                         ),
                         hintText: 'Add a caption...',
                         hintStyle: const TextStyle(
@@ -530,55 +545,63 @@ class _WhatsAppExampleState extends State<WhatsAppExample>
                         ),
                         fillColor: const Color(0xFF202D35),
                       ),
+                      hintText: 'Add a caption...',
+                      hintStyle: const TextStyle(
+                        color: Color.fromARGB(255, 238, 238, 238),
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(40),
+                        borderSide: BorderSide.none,
+                      ),
+                      fillColor: const Color(0xFF202D35),
                     ),
                   ),
                 ),
-                Flexible(
-                  child: Container(
-                    padding: EdgeInsets.fromLTRB(
-                        16,
-                        7,
-                        16,
-                        12 +
-                            (editor.isSubEditorOpen
-                                ? 0
-                                : MediaQuery.viewInsetsOf(context).bottom)),
-                    color: Colors.black38,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: const Color(0xFF202D35),
-                          ),
-                          child: const Text(
-                            'Alex Frei',
-                            style: TextStyle(
-                              fontSize: 13,
-                            ),
+              ),
+              Flexible(
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                      16,
+                      7,
+                      16,
+                      12 +
+                          (editor.isSubEditorOpen
+                              ? 0
+                              : MediaQuery.viewInsetsOf(context).bottom)),
+                  color: Colors.black38,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: const Color(0xFF202D35),
+                        ),
+                        child: const Text(
+                          'Alex Frei',
+                          style: TextStyle(
+                            fontSize: 13,
                           ),
                         ),
-                        IconButton(
-                          onPressed: () {
-                            editor.doneEditing();
-                          },
-                          icon: const Icon(Icons.send),
-                          style: IconButton.styleFrom(
-                            backgroundColor: const Color(0xFF0DA886),
-                          ),
-                        )
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        onPressed: () => editor.doneEditing(),
+                        icon: const Icon(Icons.send),
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFF0DA886),
+                        ),
+                      )
+                    ],
                   ),
-                )
-              ],
-            );
-          },
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );

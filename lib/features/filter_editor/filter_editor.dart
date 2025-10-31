@@ -18,7 +18,9 @@ import '/shared/services/content_recorder/widgets/content_recorder.dart';
 import '/shared/utils/file_constructor_utils.dart';
 import '/shared/widgets/layer/layer_stack.dart';
 import '/shared/widgets/transform/transformed_content_generator.dart';
+import 'constants/identity_matrix_constant.dart';
 import 'types/filter_matrix.dart';
+import 'utils/lerp_color_matrix_utils.dart';
 import 'widgets/filtered_widget.dart';
 
 export 'utils/filter_generator/filter_addons.dart';
@@ -168,10 +170,19 @@ class FilterEditorState extends State<FilterEditor>
   late final StreamController<void> _uiFilterStream;
 
   /// The selected filter.
-  FilterModel selectedFilter = PresetFilters.none;
+  FilterModel get selectedFilter => _selectedFilter;
+  FilterModel _selectedFilter = PresetFilters.none;
+  set selectedFilter(FilterModel filter) {
+    setFilter(filter);
+  }
 
-  /// The opacity of the selected filter.
-  double filterOpacity = 1;
+  /// The opacity of the selected filter, ranging
+  /// from 0 (fully transparent) to 1 (fully opaque).
+  double get filterOpacity => _filterOpacity;
+  double _filterOpacity = 1;
+  set filterOpacity(double value) {
+    setFilterOpacity(value);
+  }
 
   @override
   void initState() {
@@ -204,10 +215,9 @@ class FilterEditorState extends State<FilterEditor>
       editorImage: widget.editorImage,
       returnValue: _getActiveFilters(),
       blur: appliedBlurFactor,
-      colorFilters: [
-        ..._getActiveFilters(),
-        ...appliedTuneAdjustments.map((item) => item.matrix),
-      ],
+      matrixFilterList: _getActiveFilters(),
+      matrixTuneAdjustmentsList:
+          appliedTuneAdjustments.map((item) => item.matrix).toList(),
       transform: initialTransformConfigs,
     );
     filterEditorCallbacks?.handleDone();
@@ -216,27 +226,27 @@ class FilterEditorState extends State<FilterEditor>
   FilterMatrix _getActiveFilters() {
     return [
       ...appliedFilters,
-      ...selectedFilter.filters,
-      ColorFilterAddons.opacity(filterOpacity),
+      ...selectedFilter.filters.map(
+        (matrix) => lerpColorMatrix(identityMatrix, matrix, filterOpacity),
+      ),
     ];
   }
 
   /// Set the current filter.
   void setFilter(FilterModel filter) {
-    selectedFilter = filter;
+    _selectedFilter = filter;
     _uiFilterStream.add(null);
   }
 
   /// Set the current filter opacity.
   void setFilterOpacity(double value) {
-    filterOpacity = value;
+    _filterOpacity = value.clamp(0, 1);
     _uiFilterStream.add(null);
   }
 
   /// Handles changes in the filter factor value.
   void _onChanged(double value) {
-    filterOpacity = value;
-    _uiFilterStream.add(null);
+    setFilterOpacity(value);
     filterEditorCallbacks?.handleFilterFactorChange(value);
   }
 
@@ -254,6 +264,7 @@ class FilterEditorState extends State<FilterEditor>
       data: theme.copyWith(
           tooltipTheme: theme.tooltipTheme.copyWith(preferBelow: true)),
       child: ExtendedPopScope(
+        canPop: filterEditorConfigs.enableGesturePop,
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: filterEditorConfigs.style.uiOverlayStyle,
           child: SafeArea(
@@ -356,6 +367,7 @@ class FilterEditorState extends State<FilterEditor>
                 configs: configs,
                 image: editorImage,
                 videoPlayer: videoController?.videoPlayer,
+                blankSize: initConfigs.mainImageSize,
                 filters: _getActiveFilters(),
                 tuneAdjustments: appliedTuneAdjustments,
                 blurFactor: appliedBlurFactor,
@@ -427,8 +439,7 @@ class FilterEditorState extends State<FilterEditor>
                 transformConfigs: initialTransformConfigs,
                 selectedFilter: selectedFilter.filters,
                 onSelectFilter: (filter) {
-                  selectedFilter = filter;
-                  _uiFilterStream.add(null);
+                  setFilter(filter);
                   setStateFilterList(() {});
                   filterEditorCallbacks?.handleFilterChanged(filter);
                   WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -441,5 +452,43 @@ class FilterEditorState extends State<FilterEditor>
         ),
       ),
     );
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty<FilterEditorInitConfigs>(
+        'initConfigs',
+        widget.initConfigs,
+      ))
+      ..add(DiagnosticsProperty<EditorImage?>(
+        'editorImage',
+        widget.editorImage,
+      ))
+      ..add(DiagnosticsProperty<ProVideoController?>(
+        'videoController',
+        widget.videoController,
+      ))
+      ..add(DiagnosticsProperty<FilterModel>(
+        'selectedFilter',
+        _selectedFilter,
+      ))
+      ..add(DoubleProperty(
+        'filterOpacity',
+        _filterOpacity,
+      ))
+      ..add(IterableProperty<TuneAdjustmentMatrix>(
+        'appliedTuneAdjustments',
+        appliedTuneAdjustments,
+      ))
+      ..add(DoubleProperty(
+        'appliedBlurFactor',
+        appliedBlurFactor,
+      ))
+      ..add(IterableProperty<List<double>>(
+        'appliedFilters',
+        appliedFilters,
+      ));
   }
 }

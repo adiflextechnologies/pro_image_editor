@@ -1,3 +1,9 @@
+import 'package:flutter/foundation.dart';
+
+import '/core/constants/int_constants.dart';
+import '/shared/extensions/num_extension.dart';
+import '/shared/utils/parser/double_parser.dart';
+
 /// A class representing the adjustment matrix for a tune adjustment item.
 ///
 /// This class holds the adjustment [id], the [value] of the adjustment, and
@@ -10,8 +16,8 @@ class TuneAdjustmentMatrix {
   factory TuneAdjustmentMatrix.fromMap(Map<String, dynamic> map) {
     return TuneAdjustmentMatrix(
       id: map['id']?.toString() ?? '-',
-      value: double.tryParse(map['value']?.toString() ?? '0') ?? 0,
-      matrix: List.castFrom<dynamic, double>((map['matrix'] ?? []) as List),
+      value: safeParseDouble(map['value']?.toString()),
+      matrix: (map['matrix'] as List?)?.map(safeParseDouble).toList() ?? [],
     );
   }
 
@@ -39,11 +45,12 @@ class TuneAdjustmentMatrix {
   /// Converts this [TuneAdjustmentMatrix] instance into a [Map] representation.
   ///
   /// The map contains the [id], [value], and [matrix] as key-value pairs.
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({int maxDecimalPlaces = kMaxSafeDecimalPlaces}) {
     return {
       'id': id,
-      'value': value,
-      'matrix': matrix,
+      'value': value.roundSmart(maxDecimalPlaces),
+      'matrix':
+          matrix.map((value) => value.roundSmart(maxDecimalPlaces)).toList(),
     };
   }
 
@@ -58,4 +65,17 @@ class TuneAdjustmentMatrix {
       matrix: [...matrix],
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is TuneAdjustmentMatrix &&
+        other.id == id &&
+        other.value == value &&
+        listEquals(other.matrix, matrix);
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ value.hashCode ^ matrix.hashCode;
 }

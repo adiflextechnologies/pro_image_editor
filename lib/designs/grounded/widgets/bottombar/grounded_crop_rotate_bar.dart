@@ -1,3 +1,6 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+// TODO: Remove the deprecated values when releasing version 12.0.0.
+
 import 'package:flutter/material.dart';
 
 import '/core/mixins/converted_configs.dart';
@@ -5,6 +8,7 @@ import '/core/mixins/editor_configs_mixin.dart';
 import '/designs/grounded/grounded_design.dart';
 import '/features/crop_rotate_editor/widgets/crop_aspect_ratio_button.dart';
 import '/pro_image_editor.dart';
+import '/shared/widgets/editor_scrollbar.dart';
 
 /// A widget that provides controls for cropping and rotating an image in the
 /// ProImageEditor.
@@ -71,10 +75,8 @@ class _GroundedCropRotateBarState extends State<GroundedCropRotateBar>
     return GroundedBottomWrapper(
       theme: configs.theme,
       children: (constraints) => [
-        Scrollbar(
+        EditorScrollbar(
           controller: _bottomBarScrollCtrl,
-          scrollbarOrientation: ScrollbarOrientation.top,
-          thickness: isDesktop ? null : 0,
           child: _buildFunctions(constraints),
         ),
         GroundedBottomBar(
@@ -110,7 +112,9 @@ class _GroundedCropRotateBarState extends State<GroundedCropRotateBar>
               children: <Widget>[
                 ..._buildConfigs(),
                 if (cropRotateEditorConfigs.aspectRatios.isNotEmpty &&
-                    cropRotateEditorConfigs.showAspectRatioButton) ...[
+                    cropRotateEditorConfigs.showAspectRatioButton &&
+                    cropRotateEditorConfigs.tools
+                        .contains(CropRotateTool.aspectRatio)) ...[
                   const SizedBox(width: 5),
                   _buildDivider(),
                   ...List.generate(

@@ -55,9 +55,19 @@ class MainEditorStateHistoryService {
   /// Callback for capturing a screenshot of the editor.
   final Function() takeScreenshot;
 
+  /// A flag indicating whether an import operation is currently in progress.
+  ///
+  /// This is used to track the state of an import process, where `true` means
+  /// the import is ongoing, and `false` means no import is in progress.
+  bool isImportInProgress = false;
+
   /// Imports state history and performs necessary recalculations.
   Future<void> importStateHistory(
-      ImportStateHistory import, BuildContext context) async {
+    ImportStateHistory import,
+    BuildContext context,
+    Function() setState,
+  ) async {
+    isImportInProgress = true;
     // Recalculate position and size if needed
     if (import.configs.recalculateSizeAndPosition ||
         import.version == ExportImportVersion.version_1_0_0) {
@@ -77,6 +87,7 @@ class MainEditorStateHistoryService {
     // Update state and UI
     stateManager.updateActiveItems();
     mainEditorCallbacks?.handleUpdateUI();
+    isImportInProgress = false;
   }
 
   /// Exports the current state history.
@@ -89,7 +100,6 @@ class MainEditorStateHistoryService {
       editorConfigs: this.configs,
       stateHistory: stateManager.stateHistory,
       imageInfos: imageInfos,
-      imgSize: sizesManager.decodedImageSize,
       editorPosition: stateManager.historyPointer,
       configs: configs,
       contentRecorderCtrl: controllers.screenshot,
@@ -148,7 +158,10 @@ class MainEditorStateHistoryService {
     bool enableInitialEmptyState = import.configs.enableInitialEmptyState;
     bool enableEmptyHistory =
         import.stateHistory.isEmpty || enableInitialEmptyState;
+
     stateManager
+      // Important to reset first the historyPointer
+      ..historyPointer = 0
       ..screenshots = []
       ..stateHistory = [
         if (enableEmptyHistory)

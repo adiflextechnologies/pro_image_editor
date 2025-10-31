@@ -154,13 +154,39 @@ The ProImageEditor is a Flutter widget designed for image editing within your ap
 - ✅ Video-Editor 
 
 
-#### Planned features
-- ✨ Paint-Editor 
-  - Freestyle-Painter with improved performance and hitbox
-- ✨ AI Futures => Perhaps integrating Adobe Firefly
-- ✨ Helper lines to align items with each other
-- ✨ Advanced eraser function
-- ✨ Different horizontal/vertical layer scale factor
+### 🚀 Performance & Architecture
+
+- 🧵 **Multi-Threading**  
+  - Use isolates for background tasks on native platforms.  
+  - Use web workers for background tasks in web environments.  
+  - Auto- or manually configure the number of active background processors based on device capabilities.  
+
+### 🛠️ Core Features
+
+- 🖼️ **Flexible Image Input**: Load images from memory, assets, files, or network.  
+- 🌍 **i18n Support**: Translate every string in the UI.  
+- 🎚️ **Per-Editor Configuration**: Each module offers extensive customization options.  
+- 🧱 **Fully Customizable**: Swap icons, styles, and widgets for any subeditor.  
+- 📐 **Helper Lines**: Snap and align objects more accurately.  
+- ↩️ **Undo/Redo** support for non-destructive editing.  
+- 🔁 **Movable Background Image**: Position the base image as needed.  
+- 🔀 **Reorder Layers**: Change layer stacking order dynamically.  
+- 🎯 **Interactive Layers**: Select and manipulate each element with precision.  
+- 🖌️ **Hit Detection**: Paint layers support interactive selection.  
+- 🔍 **Zoom Support**: Zoom in/out in both paint and main editor views.  
+- 🖱️ **Enhanced Desktop UX**: Fine-tuned movement and scaling on desktop platforms.  
+- 🧲 **Multiselect Support**: Select multiple elements at once.  
+
+### 🎨 Themes
+
+- 🪵 **Grounded Theme**  
+- 🧊 **Frosted Glass Theme**  
+- 💬 **WhatsApp Theme** 
+
+### 🔗 Integration
+
+- 🤖 **AI Assistant**: Integrate ChatGPT, Gemini, or other AI models to assist with image editing via smart suggestions or direct commands.
+- 🎥 **Video Editor**: Seamlessly combine image and video editing workflows.
 
 
 
@@ -191,31 +217,6 @@ _flutter.loader.load({
     }
 });
 ```
-<br/>
-
-The HTML renderer is not supported in the image editor and has been completely removed in Flutter version >= `3.29.0`. However, if you are using an older Flutter version < `3.29`, please ensure that you enforce the canvas renderer.
-
-To enable the Canvaskit renderer by default, you can do the following in your `flutter_bootstrap.js` file.
-
-```js
-{{flutter_js}}
-{{flutter_build_config}}
-
-_flutter.loader.load({
-    serviceWorkerSettings: {
-        serviceWorkerVersion: {{flutter_service_worker_version}},
-    },
-    onEntrypointLoaded: function (engineInitializer) {
-      engineInitializer.initializeEngine({
-        useColorEmoji: true,
-        renderer: 'canvaskit' // add this parameter
-      }).then(function (appRunner) {
-        appRunner.runApp();
-      });
-    }
-});
-```
-
 <br/>
 
 You can view the full web example [here](https://github.com/hm21/pro_image_editor/tree/stable/example/web).
@@ -318,7 +319,6 @@ A big thanks to the authors of these amazing packages.
   - [emoji_picker_flutter](https://pub.dev/packages/emoji_picker_flutter)
   - [image](https://pub.dev/packages/image)
   - [mime](https://pub.dev/packages/mime)
-  - [rounded_background_text](https://pub.dev/packages/rounded_background_text)
 
 ## Contributors
 <a href="https://github.com/hm21/pro_image_editor/graphs/contributors">

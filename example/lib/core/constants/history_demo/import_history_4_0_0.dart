@@ -61,7 +61,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
           'colorMode': 'backgroundAndColor',
           'color': 4288216832,
           'background': 4278190080,
-          'colorPickerPosition': 0.42514285714285716,
           'align': 'center',
           'fontScale': 1.0
         }
@@ -94,7 +93,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
           'colorMode': 'backgroundAndColor',
           'color': 4288216832,
           'background': 4278190080,
-          'colorPickerPosition': 0.42514285714285716,
           'align': 'center',
           'fontScale': 1.0
         }
@@ -127,7 +125,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
           'colorMode': 'backgroundAndColor',
           'color': 4288216832,
           'background': 4278190080,
-          'colorPickerPosition': 0.42514285714285716,
           'align': 'center',
           'fontScale': 1.0
         },
@@ -183,7 +180,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
           'colorMode': 'backgroundAndColor',
           'color': 4288216832,
           'background': 4278190080,
-          'colorPickerPosition': 0.42514285714285716,
           'align': 'center',
           'fontScale': 1.0
         },
@@ -285,7 +281,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
           'colorMode': 'backgroundAndColor',
           'color': 4288216832,
           'background': 4278190080,
-          'colorPickerPosition': 0.42514285714285716,
           'align': 'center',
           'fontScale': 1.0
         },
@@ -623,7 +618,6 @@ Map<String, dynamic> kImportHistoryDemoData = {
           'colorMode': 'backgroundAndColor',
           'color': 4288216832,
           'background': 4278190080,
-          'colorPickerPosition': 0.42514285714285716,
           'align': 'center',
           'fontScale': 1.0
         },

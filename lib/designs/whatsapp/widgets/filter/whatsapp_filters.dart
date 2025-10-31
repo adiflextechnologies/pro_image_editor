@@ -29,6 +29,7 @@ class WhatsappFilters extends StatelessWidget {
     super.key,
     required this.editor,
     required this.whatsAppHelper,
+    required this.emptyFilter,
   });
 
   /// The state of the image editor associated with these filters.
@@ -43,32 +44,40 @@ class WhatsappFilters extends StatelessWidget {
   /// filter functionality, aiding in managing and applying filters.
   final WhatsAppHelper whatsAppHelper;
 
+  /// A list of empty filter matrices used as a default or placeholder filter.
+  final List<List<double>> emptyFilter;
+
   @override
   Widget build(BuildContext context) {
+    final sizesManager = editor.sizesManager;
+    final stateManager = editor.stateManager;
+    final activeFilters = stateManager.activeFilters;
+    final double showFactor =
+        max(0, min(1, 1 / 120 * whatsAppHelper.filterShowHelper));
     return Positioned(
       left: 0,
       right: 0,
       bottom: -120 + whatsAppHelper.filterShowHelper,
-      child: Opacity(
-        opacity: max(0, min(1, 1 / 120 * whatsAppHelper.filterShowHelper)),
-        child: Container(
-          margin: const EdgeInsets.only(top: 7),
-          color: const Color(0xFF121B22),
-          child: FilterEditorItemList(
-            mainBodySize: editor.sizesManager.bodySize,
-            mainImageSize: editor.sizesManager.decodedImageSize,
-            transformConfigs: editor.stateManager.transformConfigs,
-            itemScaleFactor:
-                max(0, min(1, 1 / 120 * whatsAppHelper.filterShowHelper)),
-            editorImage: editor.editorImage!,
-            blurFactor: editor.stateManager.activeBlur,
-            configs: editor.configs,
-            selectedFilter: editor.stateManager.activeFilters.isNotEmpty
-                ? editor.stateManager.activeFilters
-                : PresetFilters.none.filters,
-            onSelectFilter: (filter) {
-              editor.addHistory(filters: filter.filters);
-            },
+      child: GestureInterceptor(
+        child: Opacity(
+          opacity: showFactor,
+          child: Container(
+            margin: const EdgeInsets.only(top: 7),
+            color: const Color(0xFF121B22),
+            child: FilterEditorItemList(
+              mainBodySize: sizesManager.bodySize,
+              mainImageSize: sizesManager.decodedImageSize,
+              transformConfigs: stateManager.transformConfigs,
+              itemScaleFactor: showFactor,
+              editorImage: editor.editorImage!,
+              blurFactor: stateManager.activeBlur,
+              configs: editor.configs,
+              selectedFilter:
+                  activeFilters.isNotEmpty ? activeFilters : emptyFilter,
+              onSelectFilter: (filter) {
+                editor.addHistory(filters: filter.filters);
+              },
+            ),
           ),
         ),
       ),

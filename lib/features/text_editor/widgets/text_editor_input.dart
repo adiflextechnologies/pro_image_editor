@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '/core/models/editor_callbacks/text_editor_callbacks.dart';
 import '/core/models/editor_configs/pro_image_editor_configs.dart';
 import '/core/models/layers/layer.dart';
-import '/plugins/rounded_background_text/src/rounded_background_text_field.dart';
+import 'rounded_background_text/rounded_background_text_field.dart';
 
 /// A widget for managing the text input in the text editor, providing a
 /// customizable input area with styling and configuration options.
-class TextEditorInput extends StatelessWidget {
+class TextEditorInput extends StatefulWidget {
   /// Creates a `TextEditorInput` widget with the required configurations,
   /// callbacks, and styling for text input management.
   ///
@@ -38,6 +38,8 @@ class TextEditorInput extends StatelessWidget {
     required this.backgroundColor,
     required this.layer,
     required this.textCtrl,
+    required this.maxWidth,
+    required this.cursorWidth,
   });
 
   /// Optional callbacks for text editor interactions.
@@ -61,6 +63,13 @@ class TextEditorInput extends StatelessWidget {
   /// The font size of the input text.
   final double textFontSize;
 
+  /// The width of the text cursor in the text editor input, measured in
+  /// logical pixels.
+  final double cursorWidth;
+
+  /// The maximum width available for the text before the text will overflow.
+  final double maxWidth;
+
   /// The scale factor to transform the textfield
   final double scaleFactor;
 
@@ -79,6 +88,11 @@ class TextEditorInput extends StatelessWidget {
   /// The text editing controller for managing input content.
   final TextEditingController textCtrl;
 
+  @override
+  State<TextEditorInput> createState() => _TextEditorInputState();
+}
+
+class _TextEditorInputState extends State<TextEditorInput> {
   Widget _flightShuttleBuilder(
     BuildContext flightContext,
     Animation<double> animation,
@@ -86,44 +100,56 @@ class TextEditorInput extends StatelessWidget {
     BuildContext fromHeroContext,
     BuildContext toHeroContext,
   ) {
-    if (flightDirection == HeroFlightDirection.pop) {
-      return fromHeroContext.widget;
-    }
+    final Hero toHero = toHeroContext.widget as Hero;
 
-    void animationStatusListener(AnimationStatus status) {
-      if (status == AnimationStatus.completed) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          focusNode.requestFocus();
-        });
-        animation.removeStatusListener(animationStatusListener);
+    final isOpening = flightDirection == HeroFlightDirection.push;
+
+    if (isOpening) {
+      void animationStatusListener(AnimationStatus status) {
+        if (status == AnimationStatus.completed) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.focusNode.requestFocus();
+          });
+          animation.removeStatusListener(animationStatusListener);
+        }
       }
+
+      animation.addStatusListener(animationStatusListener);
     }
 
-    animation.addStatusListener(animationStatusListener);
+    final shuttleChild =
+        InheritedTheme.captureAll(fromHeroContext, toHero.child);
 
-    return toHeroContext.widget;
+    return isOpening
+        ? SingleChildScrollView(
+            clipBehavior: Clip.none,
+            scrollDirection: Axis.horizontal,
+            child: IntrinsicWidth(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: widget.maxWidth),
+                child: shuttleChild,
+              ),
+            ),
+          )
+        : shuttleChild;
   }
 
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: configs.inputTextFieldAlign,
-
-      ///  TODO: remove `IntrinsicWidth` after improve
-      /// `RoundedBackgroundTextField` code
-      child: IntrinsicWidth(
-        child: Padding(
-          padding: configs.style.textFieldMargin,
+      alignment: widget.configs.inputTextFieldAlign,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: widget.configs.style.textFieldMargin,
+        child: IntrinsicWidth(
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Hero(
-                flightShuttleBuilder: _flightShuttleBuilder,
-                tag: heroTag ?? 'Text-Image-Editor-Empty-Hero',
-                createRectTween: (begin, end) =>
-                    RectTween(begin: begin, end: end),
-                child: _buildInputField(),
-              ),
+            clipBehavior: Clip.none,
+            padding: widget.configs.enableAutoOverflow
+                ? null
+                : const EdgeInsets.symmetric(horizontal: 16.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: widget.maxWidth),
+              child: _buildInputField(),
             ),
           ),
         ),
@@ -133,41 +159,45 @@ class TextEditorInput extends StatelessWidget {
 
   Widget _buildInputField() {
     return Transform.scale(
-      scale: scaleFactor,
-      child: RoundedBackgroundTextField(
-        key: const ValueKey('rounded-background-text-editor-field'),
-        controller: textCtrl,
-        focusNode: focusNode,
-        onChanged: callbacks?.handleChanged,
-        onEditingComplete: callbacks?.handleEditingComplete,
-        onSubmitted: callbacks?.handleSubmitted,
-        autocorrect: configs.enableAutocorrect,
-        enableSuggestions: configs.enableSuggestions,
-        keyboardType: TextInputType.multiline,
-        textInputAction: TextInputAction.newline,
-        textCapitalization: TextCapitalization.sentences,
-        textAlign: textCtrl.text.isEmpty ? TextAlign.center : align,
-        maxLines: null,
-        cursorColor: configs.style.inputCursorColor,
-        cursorHeight: textFontSize * 1.2,
-        scrollPhysics: const NeverScrollableScrollPhysics(),
-        hint: textCtrl.text.isEmpty ? i18n.inputHintText : '',
-        hintStyle: selectedTextStyle.copyWith(
-        color: configs.style.inputHintColor,
-        fontSize: textFontSize,
-        // do NOT override height/letterSpacing/shadows/decoration here
-        ),
-        backgroundColor: backgroundColor,
-        style: selectedTextStyle.copyWith(
-        color: textColor,
-        fontSize: textFontSize,
-        // IMPORTANT: do NOT set height / letterSpacing / decoration / shadows
-        // We want to respect what AdvancedTextEditor sets (line spacing, letter spacing, outline via shadows)
-        ),
+      scale: widget.scaleFactor,
+      child: Hero(
+        flightShuttleBuilder: _flightShuttleBuilder,
+        tag: widget.heroTag ?? 'Text-Image-Editor-Empty-Hero',
+        child: RoundedBackgroundTextField(
+          key: const ValueKey('rounded-background-text-editor-field'),
+          maxTextWidth: widget.maxWidth,
+          controller: widget.textCtrl,
+          focusNode: widget.focusNode,
+          onChanged: (value) {
+            widget.callbacks?.handleChanged(value);
+            setState(() {});
+          },
+          onEditingComplete: widget.callbacks?.handleEditingComplete,
+          onSubmitted: widget.callbacks?.handleSubmitted,
+          textAlign:
+              widget.textCtrl.text.isEmpty ? TextAlign.center : widget.align,
+          configs: widget.configs,
+          cursorHeight: widget.textFontSize,
+          cursorWidth: widget.cursorWidth,
+          hint: widget.i18n.inputHintText,
+          hintStyle: widget.selectedTextStyle.copyWith(
+            color: widget.configs.style.inputHintColor,
+            fontSize: widget.textFontSize,
+            shadows: [],
+          ),
+          backgroundColor: widget.backgroundColor,
+          style: widget.selectedTextStyle.copyWith(
+            color: widget.textColor,
+            fontSize: widget.textFontSize,
+            letterSpacing: 0,
+            decoration: TextDecoration.none,
+            shadows: [],
+          ),
 
-        /// If we edit an layer we focus to the textfield after the
-        /// hero animation is done
-        autofocus: layer == null,
+          /// If we edit an layer we focus to the textfield after the
+          /// hero animation is done
+          autofocus: widget.layer == null,
+        ),
       ),
     );
   }

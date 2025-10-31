@@ -17,22 +17,17 @@ class TextEditorColorPicker extends StatelessWidget {
   /// - [configs]: Configuration settings for the editor, including available
   ///   colors.
   /// - [rebuildController]: A stream controller for triggering UI updates.
-  /// - [colorPosition]: The position of the selected color in the palette.
   /// - [primaryColor]: The current primary color selected for the text.
   /// - [selectedTextStyle]: The text style currently applied to the text.
   /// - [onUpdateColor]: Callback triggered when the color is updated.
-  /// - [onPositionChange]: Callback triggered when the color position is
-  ///   changed.
   const TextEditorColorPicker({
     super.key,
     required this.state,
     required this.configs,
     required this.rebuildController,
-    required this.colorPosition,
     required this.primaryColor,
     required this.selectedTextStyle,
     required this.onUpdateColor,
-    required this.onPositionChange,
   });
 
   /// Represents the current state of the text editor.
@@ -44,9 +39,6 @@ class TextEditorColorPicker extends StatelessWidget {
   /// A stream controller for triggering UI updates.
   final StreamController<void> rebuildController;
 
-  /// The position of the selected color in the palette.
-  final double colorPosition;
-
   /// The current primary color selected for the text.
   final Color primaryColor;
 
@@ -55,9 +47,6 @@ class TextEditorColorPicker extends StatelessWidget {
 
   /// Callback triggered when the color is updated.
   final Function(Color color) onUpdateColor;
-
-  /// Callback triggered when the color position is changed.
-  final Function(double value)? onPositionChange;
 
   @override
   Widget build(BuildContext context) {
@@ -87,9 +76,7 @@ class TextEditorColorPicker extends StatelessWidget {
                 10 * 2 -
                 MediaQuery.paddingOf(context).top,
           ),
-          onPositionChange: onPositionChange,
-          initPosition: colorPosition,
-          initialColor: primaryColor,
+          color: primaryColor,
           horizontal: false,
           thumbColor: Colors.white,
           cornerRadius: 10,

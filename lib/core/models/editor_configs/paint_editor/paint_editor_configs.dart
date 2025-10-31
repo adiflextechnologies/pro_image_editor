@@ -1,9 +1,13 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+// TODO: Remove the deprecated values when releasing version 12.0.0.
 import 'package:flutter/widgets.dart';
 
 import '/features/paint_editor/enums/paint_editor_enum.dart';
 import '../../custom_widgets/paint_editor_widgets.dart';
 import '../../icons/paint_editor_icons.dart';
 import '../../styles/paint_editor_style.dart';
+import '../utils/base_editor_layer_configs.dart';
+import '../utils/base_sub_editor_configs.dart';
 import '../utils/editor_safe_area.dart';
 import '../utils/zoom_configs.dart';
 import 'censor_configs.dart';
@@ -18,30 +22,17 @@ export 'censor_configs.dart';
 /// `PaintEditorConfigs` allows you to define settings for a paint editor,
 /// including whether the editor is enabled, which drawing tools are available,
 /// initial settings for drawing, and more.
-///
-/// Example usage:
-/// ```dart
-/// PaintEditorConfigs(
-///   enabled: true,
-///   enableModeFreeStyle = true,
-///   enableModeArrow = true,
-///   enableModeLine = true,
-///   enableModeRect = true,
-///   enableModeCircle = true,
-///   enableModeDashLine = true,
-///   enableModeBlur = true,
-///   enableModePixelate = true,
-///   enableModeEraser = true,
-///   isInitiallyFilled: false,
-///   initialPaintMode: PaintMode.freeStyle,
-/// );
-/// ```
-class PaintEditorConfigs extends ZoomConfigs {
+class PaintEditorConfigs extends ZoomConfigs
+    implements BaseEditorLayerConfigs, BaseSubEditorConfigs {
   /// Creates an instance of PaintEditorConfigs with optional settings.
   ///
   /// By default, the editor is enabled, and most drawing tools are enabled.
   /// Other properties are set to reasonable defaults.
   const PaintEditorConfigs({
+    @Deprecated(
+      'Use tools inside MainEditorConfigs instead, e.g. tools: '
+      '[SubEditorMode.paint]',
+    )
     this.enabled = true,
     super.enableZoom,
     super.editorMinScale,
@@ -51,16 +42,44 @@ class PaintEditorConfigs extends ZoomConfigs {
     super.doubleTapZoomDuration,
     super.doubleTapZoomCurve,
     super.boundaryMargin,
+    super.invertTrackpadDirection,
+    this.layerFractionalOffset = const Offset(-0.5, -0.5),
+    this.enableGesturePop = true,
+    this.enableEdit = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.freeStyle]')
     this.enableModeFreeStyle = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.arrow]')
     this.enableModeArrow = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.line]')
     this.enableModeLine = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.rect]')
     this.enableModeRect = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.circle]')
     this.enableModeCircle = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.dashLine]')
     this.enableModeDashLine = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.polygon]')
     this.enableModePolygon = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.blur]')
     this.enableModeBlur = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.pixelate]')
     this.enableModePixelate = true,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.eraser]')
     this.enableModeEraser = true,
+    this.tools = const [
+      PaintMode.moveAndZoom,
+      PaintMode.freeStyle,
+      PaintMode.arrow,
+      PaintMode.line,
+      PaintMode.rect,
+      PaintMode.circle,
+      PaintMode.dashLine,
+      PaintMode.dashDotLine,
+      PaintMode.polygon,
+      PaintMode.pixelate,
+      PaintMode.blur,
+      PaintMode.eraser,
+    ],
     this.showToggleFillButton = true,
     this.showLineWidthAdjustmentButton = true,
     this.showOpacityAdjustmentButton = true,
@@ -70,10 +89,13 @@ class PaintEditorConfigs extends ZoomConfigs {
     this.polygonConnectionThreshold = 20,
     this.minScale = double.negativeInfinity,
     this.maxScale = double.infinity,
-    this.enableFreeStyleHighPerformanceScaling,
-    this.enableFreeStyleHighPerformanceMoving,
-    this.enableFreeStyleHighPerformanceHero = false,
     this.initialPaintMode = PaintMode.freeStyle,
+    this.eraserMode = EraserMode.partial,
+    this.eraserSize = 8.0,
+    this.dashLineSpacingFactor = 2,
+    this.dashLineWidthFactor = 2.5,
+    this.dashDotLineSpacingFactor = 2,
+    this.dashDotLineWidthFactor = 2.5,
     this.censorConfigs = const CensorConfigs(),
     this.safeArea = const EditorSafeArea(),
     this.style = const PaintEditorStyle(),
@@ -84,31 +106,47 @@ class PaintEditorConfigs extends ZoomConfigs {
         assert(editorMaxScale > editorMinScale,
             'editorMaxScale must be greater than editorMinScale');
 
+  /// {@macro enableGesturePop}
+  @override
+  final bool enableGesturePop;
+
   /// Indicates whether the paint editor is enabled.
+  @Deprecated(
+    'Use tools inside MainEditorConfigs instead, e.g. tools: '
+    '[SubEditorMode.paint]',
+  )
   final bool enabled;
 
   /// Indicating whether the free-style drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.freeStyle]')
   final bool enableModeFreeStyle;
 
   /// Indicating whether the arrow drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.arrow]')
   final bool enableModeArrow;
 
   /// Indicating whether the line drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.line]')
   final bool enableModeLine;
 
   /// Indicating whether the rectangle drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.rect]')
   final bool enableModeRect;
 
   /// Indicating whether the circle drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.circle]')
   final bool enableModeCircle;
 
   /// Indicating whether the dash line drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.dashLine]')
   final bool enableModeDashLine;
 
   /// Indicating whether the polygon drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.polygon]')
   final bool enableModePolygon;
 
   /// Indicating whether the blur drawing option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.blur]')
   final bool enableModeBlur;
 
   /// Indicating whether the pixelate drawing option is enabled.
@@ -116,10 +154,32 @@ class PaintEditorConfigs extends ZoomConfigs {
   /// **IMPORTANT**: This mode is only supported when using the Impeller
   /// rendering engine. On all other platforms, it will automatically be
   /// set to `false`.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.pixelate]')
   final bool enableModePixelate;
 
   /// Indicating whether the eraser option is enabled.
+  @Deprecated('Use tools instead, e.g. tools: [PaintMode.eraser]')
   final bool enableModeEraser;
+
+  /// Defines which paint tools are available in the editor.
+  ///
+  /// The order of the tools in this list determines the order in the UI.
+  /// Simply include the tools you want and leave out the ones you don’t.
+  ///
+  /// Example:
+  /// ```dart
+  /// PaintEditorConfigs(
+  ///   tools: [
+  ///     PaintMode.freeStyle,
+  ///     PaintMode.arrow,
+  ///     PaintMode.line,
+  ///     PaintMode.rect,
+  ///     PaintMode.circle,
+  ///     PaintMode.blur,
+  ///   ],
+  /// )
+  /// ```
+  final List<PaintMode> tools;
 
   /// Whether to show a button for toggle the fill state.
   final bool showToggleFillButton;
@@ -139,34 +199,19 @@ class PaintEditorConfigs extends ZoomConfigs {
   /// Shares the zoom matrix between the main and paint editor.
   final bool enableShareZoomMatrix;
 
-  /// Enables high-performance scaling for free-style drawing when set to
-  /// `true`.
-  ///
-  /// When this option is enabled, it optimizes scaling for improved
-  /// performance.
-  ///
-  /// By default, it's set to `true` on mobile devices and `false` on desktop
-  /// devices.
-  final bool? enableFreeStyleHighPerformanceScaling;
-
-  /// Enables high-performance moving for free-style drawing when set to `true`.
-  ///
-  /// When this option is enabled, it optimizes moving for improved performance.
-  ///
-  /// By default, it's set to `true` only on mobile-web devices.
-  final bool? enableFreeStyleHighPerformanceMoving;
-
-  /// Enables high-performance hero-animations for free-style drawing when set
-  /// to `true`.
-  ///
-  /// When this option is enabled, it optimizes hero-animations for improved
-  /// performance.
-  ///
-  /// By default, it's set to `false`.
-  final bool enableFreeStyleHighPerformanceHero;
-
   /// Indicates the initial paint mode.
   final PaintMode initialPaintMode;
+
+  /// Indicates the eraser mode.
+  final EraserMode eraserMode;
+
+  /// The initial size of the eraser tool in pixels.
+  ///
+  /// This value determines the radius of the eraser when removing
+  /// painted content from the canvas. A larger value creates a bigger eraser
+  /// that removes more content at once, while a smaller value provides more
+  /// precise erasing capabilities.
+  final double eraserSize;
 
   /// Configuration settings for the censor tool in the paint editor.
   ///
@@ -184,6 +229,42 @@ class PaintEditorConfigs extends ZoomConfigs {
   /// The maximum distance between the first and last point to be auto
   /// connected when drawing polygons.
   final double polygonConnectionThreshold;
+
+  /// The spacing multiplier for dashed lines.
+  ///
+  /// The actual spacing is calculated as:
+  /// `spacing = dashLineSpacingFactor * strokeWidth`
+  ///
+  /// This ensures the visual ratio of the dashed pattern stays consistent
+  /// when the user changes the stroke width.
+  final double dashLineSpacingFactor;
+
+  /// The width multiplier for dashed line segments.
+  ///
+  /// The actual dash width is calculated as:
+  /// `dashWidth = dashLineWidthFactor * strokeWidth`
+  ///
+  /// Keeps the dashed line’s visual proportions stable when stroke width
+  /// changes.
+  final double dashLineWidthFactor;
+
+  /// The spacing multiplier for dash-dot lines.
+  ///
+  /// The actual spacing is calculated as:
+  /// `spacing = dashDotLineSpacingFactor * strokeWidth`
+  ///
+  /// Ensures the dash-dot pattern maintains its aspect ratio when
+  /// the user changes the stroke width.
+  final double dashDotLineSpacingFactor;
+
+  /// The width multiplier for dash-dot line segments.
+  ///
+  /// The actual dash width is calculated as:
+  /// `dashWidth = dashDotLineWidthFactor * strokeWidth`
+  ///
+  /// Keeps the dash-dot line appearance consistent across different stroke
+  /// widths.
+  final double dashDotLineWidthFactor;
 
   /// Defines the safe area configuration for the editor.
   final EditorSafeArea safeArea;
@@ -204,16 +285,29 @@ class PaintEditorConfigs extends ZoomConfigs {
   /// [PaintEditorConfigs] with some properties updated while keeping the
   /// others unchanged.
   PaintEditorConfigs copyWith({
+    Offset? layerFractionalOffset,
+    bool? enableGesturePop,
     bool? enabled,
+    bool? enableEdit,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.freeStyle]')
     bool? enableModeFreeStyle,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.arrow]')
     bool? enableModeArrow,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.line]')
     bool? enableModeLine,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.rect]')
     bool? enableModeRect,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.circle]')
     bool? enableModeCircle,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.dashLine]')
     bool? enableModeDashLine,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.polygon]')
     bool? enableModePolygon,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.blur]')
     bool? enableModeBlur,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.pixelate]')
     bool? enableModePixelate,
+    @Deprecated('Use tools instead, e.g. tools: [PaintMode.eraser]')
     bool? enableModeEraser,
     bool? showToggleFillButton,
     bool? showLineWidthAdjustmentButton,
@@ -221,10 +315,9 @@ class PaintEditorConfigs extends ZoomConfigs {
     bool? isInitiallyFilled,
     bool? showLayers,
     bool? enableShareZoomMatrix,
-    bool? enableFreeStyleHighPerformanceScaling,
-    bool? enableFreeStyleHighPerformanceMoving,
-    bool? enableFreeStyleHighPerformanceHero,
     PaintMode? initialPaintMode,
+    EraserMode? eraserMode,
+    double? eraserSize,
     CensorConfigs? censorConfigs,
     double? minScale,
     double? maxScale,
@@ -238,11 +331,26 @@ class PaintEditorConfigs extends ZoomConfigs {
     double? polygonConnectionThreshold,
     EdgeInsets? boundaryMargin,
     bool? enableDoubleTapZoom,
+    bool? invertTrackpadDirection,
     double? doubleTapZoomFactor,
     Duration? doubleTapZoomDuration,
     Curve? doubleTapZoomCurve,
+    double? minStrokeWidth,
+    double? maxStrokeWidth,
+    int? divisionsStrokeWidth,
+    double? minOpacity,
+    double? maxOpacity,
+    int? divisionsOpacity,
+    List<PaintMode>? tools,
+    double? dashLineSpacingFactor,
+    double? dashLineWidthFactor,
+    double? dashDotLineSpacingFactor,
+    double? dashDotLineWidthFactor,
   }) {
     return PaintEditorConfigs(
+      layerFractionalOffset:
+          layerFractionalOffset ?? this.layerFractionalOffset,
+      enableGesturePop: enableGesturePop ?? this.enableGesturePop,
       enabled: enabled ?? this.enabled,
       enableModeFreeStyle: enableModeFreeStyle ?? this.enableModeFreeStyle,
       enableModeArrow: enableModeArrow ?? this.enableModeArrow,
@@ -254,6 +362,7 @@ class PaintEditorConfigs extends ZoomConfigs {
       enableModeBlur: enableModeBlur ?? this.enableModeBlur,
       enableModePixelate: enableModePixelate ?? this.enableModePixelate,
       enableModeEraser: enableModeEraser ?? this.enableModeEraser,
+      tools: tools ?? this.tools,
       showToggleFillButton: showToggleFillButton ?? this.showToggleFillButton,
       showLineWidthAdjustmentButton:
           showLineWidthAdjustmentButton ?? this.showLineWidthAdjustmentButton,
@@ -263,15 +372,9 @@ class PaintEditorConfigs extends ZoomConfigs {
       showLayers: showLayers ?? this.showLayers,
       enableShareZoomMatrix:
           enableShareZoomMatrix ?? this.enableShareZoomMatrix,
-      enableFreeStyleHighPerformanceScaling:
-          enableFreeStyleHighPerformanceScaling ??
-              this.enableFreeStyleHighPerformanceScaling,
-      enableFreeStyleHighPerformanceMoving:
-          enableFreeStyleHighPerformanceMoving ??
-              this.enableFreeStyleHighPerformanceMoving,
-      enableFreeStyleHighPerformanceHero: enableFreeStyleHighPerformanceHero ??
-          this.enableFreeStyleHighPerformanceHero,
       initialPaintMode: initialPaintMode ?? this.initialPaintMode,
+      eraserMode: eraserMode ?? this.eraserMode,
+      eraserSize: eraserSize ?? this.eraserSize,
       censorConfigs: censorConfigs ?? this.censorConfigs,
       minScale: minScale ?? this.minScale,
       maxScale: maxScale ?? this.maxScale,
@@ -285,11 +388,26 @@ class PaintEditorConfigs extends ZoomConfigs {
       polygonConnectionThreshold:
           polygonConnectionThreshold ?? this.polygonConnectionThreshold,
       enableDoubleTapZoom: enableDoubleTapZoom ?? this.enableDoubleTapZoom,
+      invertTrackpadDirection:
+          invertTrackpadDirection ?? this.invertTrackpadDirection,
       doubleTapZoomFactor: doubleTapZoomFactor ?? this.doubleTapZoomFactor,
       doubleTapZoomDuration:
           doubleTapZoomDuration ?? this.doubleTapZoomDuration,
       doubleTapZoomCurve: doubleTapZoomCurve ?? this.doubleTapZoomCurve,
       boundaryMargin: boundaryMargin ?? this.boundaryMargin,
+      minStrokeWidth: minStrokeWidth ?? this.minStrokeWidth,
+      maxStrokeWidth: maxStrokeWidth ?? this.maxStrokeWidth,
+      divisionsStrokeWidth: divisionsStrokeWidth ?? this.divisionsStrokeWidth,
+      minOpacity: minOpacity ?? this.minOpacity,
+      maxOpacity: maxOpacity ?? this.maxOpacity,
+      divisionsOpacity: divisionsOpacity ?? this.divisionsOpacity,
+      dashLineSpacingFactor:
+          dashLineSpacingFactor ?? this.dashLineSpacingFactor,
+      dashLineWidthFactor: dashLineWidthFactor ?? this.dashLineWidthFactor,
+      dashDotLineSpacingFactor:
+          dashDotLineSpacingFactor ?? this.dashDotLineSpacingFactor,
+      dashDotLineWidthFactor:
+          dashDotLineWidthFactor ?? this.dashDotLineWidthFactor,
     );
   }
 }

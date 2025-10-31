@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '/core/mixins/converted_configs.dart';
 import '/core/mixins/editor_configs_mixin.dart';
 import '/pro_image_editor.dart';
+import '/shared/widgets/editor_scrollbar.dart';
 import '../../grounded_design.dart';
 
 /// A widget that provides the paint toolbar for the ProImageEditor.
@@ -71,10 +72,8 @@ class _GroundedPaintBarState extends State<GroundedPaintBar>
     return GroundedBottomWrapper(
       theme: configs.theme,
       children: (constraints) => [
-        Scrollbar(
+        EditorScrollbar(
           controller: _bottomBarScrollCtrl,
-          scrollbarOrientation: ScrollbarOrientation.top,
-          thickness: isDesktop ? null : 0,
           child: _buildFunctions(constraints),
         ),
         GroundedBottomBar(
@@ -138,10 +137,9 @@ class _GroundedPaintBarState extends State<GroundedPaintBar>
                   _buildDivider(),
                 ],
                 ...List.generate(
-                  widget.editor.paintModes.length,
+                  widget.editor.tools.length,
                   (index) {
-                    PaintModeBottomBarItem item =
-                        widget.editor.paintModes[index];
+                    PaintModeBottomBarItem item = widget.editor.tools[index];
                     Color color = getColor(item.mode);
                     return FadeInUp(
                       duration: kGroundedFadeInDuration * 1.5,

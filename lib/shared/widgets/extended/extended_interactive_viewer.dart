@@ -116,6 +116,9 @@ class ExtendedInteractiveViewerState extends State<ExtendedInteractiveViewer>
   late final AnimationController _animationCtrl;
   late bool _enableInteraction;
 
+  /// A getter that indicates whether interaction is enabled for the viewer.
+  bool get isInteractionEnabled => _enableInteraction;
+
   @override
   void initState() {
     super.initState();
@@ -167,8 +170,8 @@ class ExtendedInteractiveViewerState extends State<ExtendedInteractiveViewer>
     final effectiveScale = scale ?? 1.0;
 
     _transformCtrl.value = Matrix4.identity()
-      ..translate(effectiveOffset.dx, effectiveOffset.dy)
-      ..scale(effectiveScale);
+      ..translateByDouble(effectiveOffset.dx, effectiveOffset.dy, 0.0, 1.0)
+      ..scaleByDouble(effectiveScale, effectiveScale, effectiveScale, 1.0);
   }
 
   /// Animates zooming to a specific [offset] and [scale] over [duration].
@@ -186,8 +189,8 @@ class ExtendedInteractiveViewerState extends State<ExtendedInteractiveViewer>
     final effectiveScale = scale ?? 1.0;
 
     final targetMatrix = Matrix4.identity()
-      ..translate(effectiveOffset.dx, effectiveOffset.dy)
-      ..scale(effectiveScale);
+      ..translateByDouble(effectiveOffset.dx, effectiveOffset.dy, 0.0, 1.0)
+      ..scaleByDouble(effectiveScale, effectiveScale, effectiveScale, 1.0);
 
     final tween = Matrix4Tween(
       begin: _transformCtrl.value,
@@ -242,10 +245,46 @@ class ExtendedInteractiveViewerState extends State<ExtendedInteractiveViewer>
   /// Returns an [Offset] representing the translation values on the x and y
   /// axes.
   Offset get offset {
-    return Offset(
-      _transformCtrl.value.getTranslation().x,
-      _transformCtrl.value.getTranslation().y,
-    );
+    final vector3 = _transformCtrl.value.getTranslation();
+
+    return Offset(vector3.x, vector3.y);
+  }
+
+  bool _helperScaledStarted = false;
+
+  /// Handles the start of a scaling gesture by forwarding the [details]
+  /// to the underlying raw viewer's `onScaleStart` method.
+  void onScaleStart(ScaleStartDetails details) {
+    _helperScaledStarted = true;
+    if (!widget.zoomConfigs.enableZoom) return;
+    _rawViewerKey.currentState!.onScaleStart(details);
+  }
+
+  /// Handles the scale update gesture by forwarding the [details] to the
+  /// underlying interactive viewer's state. This allows for updating the
+  /// scale (zoom) and position of the content in response to user gestures
+  /// such as pinch-to-zoom or drag.
+  ///
+  /// [details] contains information about the current state of the scale
+  /// gesture.
+  void onScaleUpdate(ScaleUpdateDetails details) {
+    if (!widget.zoomConfigs.enableZoom) return;
+    _rawViewerKey.currentState!.onScaleUpdate(details);
+  }
+
+  /// Handles the end of a scaling gesture by forwarding the [details]
+  /// to the underlying raw viewer's `onScaleEnd` method.
+  ///
+  /// This method is typically called when the user completes a pinch or zoom
+  /// gesture, allowing the widget to perform any necessary cleanup or state
+  /// updates related to the gesture.
+  ///
+  /// [details] contains information about the velocity and focal point of the
+  /// gesture.
+  void onScaleEnd(ScaleEndDetails details) {
+    if (!_helperScaledStarted || !widget.zoomConfigs.enableZoom) return;
+    _helperScaledStarted = false;
+    _rawViewerKey.currentState!.onScaleEnd(details);
   }
 
   @override
@@ -270,6 +309,8 @@ class ExtendedInteractiveViewerState extends State<ExtendedInteractiveViewer>
       onInteractionStart: widget.onInteractionStart,
       onInteractionUpdate: widget.onInteractionUpdate,
       onInteractionEnd: widget.onInteractionEnd,
+      enableExternalGestureDetector: widget.enableExternalGestureDetector,
+      invertTrackpadDirection: widget.zoomConfigs.invertTrackpadDirection,
       child: widget.child,
     );
   }

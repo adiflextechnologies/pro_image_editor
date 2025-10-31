@@ -2,10 +2,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '/core/constants/int_constants.dart';
 import '/shared/extensions/box_constraints_extension.dart';
+import '/shared/extensions/export_bool_extension.dart';
+import '/shared/extensions/num_extension.dart';
 import '/shared/services/import_export/types/widget_loader.dart';
 import '/shared/services/import_export/utils/key_minifier.dart';
 import '/shared/utils/map_utils.dart';
+import '/shared/utils/parser/bool_parser.dart';
 import '/shared/utils/parser/double_parser.dart';
 import '/shared/utils/unique_id_generator.dart';
 import '../editor_image.dart';
@@ -23,17 +27,6 @@ export 'widget_layer.dart';
 /// Represents a layer with common properties for widgets.
 class Layer {
   /// Creates a new layer with optional properties.
-  ///
-  /// The [id] parameter can be used to provide a custom identifier for the
-  /// layer.
-  /// The [offset] parameter determines the position offset of the widget.
-  /// The [rotation] parameter sets the rotation angle of the widget in degrees
-  /// (default is 0).
-  /// The [scale] parameter sets the scale factor of the widget (default is 1).
-  /// The [flipX] parameter controls horizontal flipping (default is false).
-  /// The [flipY] parameter controls vertical flipping (default is false).
-  /// The [enableInteraction] parameter controls if a user can interact with
-  /// the layer
   Layer({
     String? id,
     LayerInteraction? interaction,
@@ -42,10 +35,12 @@ class Layer {
     this.scale = 1,
     this.flipX = false,
     this.flipY = false,
-    this.isDeleted = false,
     this.meta,
     this.boxConstraints,
-  })  : id = id ?? generateUniqueId(),
+    this.groupId,
+  })  : key = key ??= GlobalKey(),
+        keyInternalSize = GlobalKey(),
+        id = id ?? generateUniqueId(),
         interaction = interaction ?? LayerInteraction();
 
   /// Factory constructor for creating a Layer instance from a map and a list
@@ -76,21 +71,20 @@ class Layer {
       );
     }
 
-    /// Creates a base Layer instance with default or map-provided properties.
     Layer layer = Layer(
       id: id,
-      flipX: map[keyConverter('flipX')] ?? false,
-      flipY: map[keyConverter('flipY')] ?? false,
+      flipX: safeParseBool(map[keyConverter('flipX')]),
+      flipY: safeParseBool(map[keyConverter('flipY')]),
       interaction: LayerInteraction.fromMap(
         map[keyConverter('interaction')] ?? {},
         keyConverter: keyInteractionConverter,
       ),
-      isDeleted: map[keyConverter('isDeleted')] ?? false,
       meta: map[keyConverter('meta')],
       offset: Offset(safeParseDouble(map['x']), safeParseDouble(map['y'])),
       rotation: safeParseDouble(map[keyConverter('rotation')]),
       scale: safeParseDouble(map[keyConverter('scale')], fallback: 1),
       boxConstraints: boxConstraints,
+      groupId: map[keyConverter('groupId')],
     );
 
     /// Determines the layer type from the map and returns the appropriate
@@ -124,6 +118,9 @@ class Layer {
     }
   }
 
+  /// Optional group identifier for grouping layers.
+  String? groupId;
+
   /// Global key associated with the Layer instance, used for accessing the
   /// widget tree.
   GlobalKey key = GlobalKey();
@@ -146,9 +143,6 @@ class Layer {
   /// rotating, or selecting the layer is enabled.
   LayerInteraction interaction;
 
-  /// Flag which indicates to the history that the layer is removed.
-  bool isDeleted;
-
   /// A unique identifier for the layer.
   String id;
 
@@ -163,19 +157,24 @@ class Layer {
   /// Returns a Map representing the properties of this layer object,
   /// including the X and Y coordinates, rotation angle, scale factors, and
   /// flip flags.
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({
+    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
+    bool enableMinify = false,
+  }) {
     return {
-      'x': offset.dx,
-      'y': offset.dy,
-      'rotation': rotation,
-      'scale': scale,
-      'flipX': flipX,
-      'flipY': flipY,
-      if (isDeleted) 'isDeleted': isDeleted,
-      'interaction': interaction.toMap(),
+      'x': offset.dx.roundSmart(maxDecimalPlaces),
+      'y': offset.dy.roundSmart(maxDecimalPlaces),
+      'rotation': rotation.roundSmart(maxDecimalPlaces),
+      'scale': scale.roundSmart(maxDecimalPlaces),
+      'flipX': flipX.minify(enableMinify),
+      'flipY': flipY.minify(enableMinify),
+      'interaction': interaction.toMap(enableMinify: enableMinify),
       if (meta != null) 'meta': meta,
       'type': 'default',
-      if (boxConstraints != null) 'boxConstraints': boxConstraints!.toMap()
+      if (boxConstraints != null)
+        'boxConstraints':
+            boxConstraints!.toMap(maxDecimalPlaces: maxDecimalPlaces),
+      if (groupId != null) 'groupId': groupId,
     };
   }
 
@@ -184,21 +183,30 @@ class Layer {
   ///
   /// The resulting map will contain only the properties that differ from the
   /// reference layer.
-  Map<String, dynamic> toMapFromReference(Layer layer) {
+  Map<String, dynamic> toMapFromReference(
+    Layer layer, {
+    int maxDecimalPlaces = kMaxSafeDecimalPlaces,
+    bool enableMinify = false,
+  }) {
     return {
-      'id': layer.id,
-      if (layer.offset.dx != offset.dx) 'x': offset.dx,
-      if (layer.offset.dy != offset.dy) 'y': offset.dy,
-      if (layer.rotation != rotation) 'rotation': rotation,
-      if (layer.scale != scale) 'scale': scale,
-      if (layer.flipX != flipX) 'flipX': flipX,
-      if (layer.flipY != flipY) 'flipY': flipY,
-      if (layer.isDeleted != isDeleted) 'isDeleted': isDeleted,
+      'id': id,
+      if (layer.offset.dx != offset.dx)
+        'x': offset.dx.roundSmart(maxDecimalPlaces),
+      if (layer.offset.dy != offset.dy)
+        'y': offset.dy.roundSmart(maxDecimalPlaces),
+      if (layer.rotation != rotation)
+        'rotation': rotation.roundSmart(maxDecimalPlaces),
+      if (layer.scale != scale) 'scale': scale.roundSmart(maxDecimalPlaces),
+      if (layer.flipX != flipX) 'flipX': flipX.minify(enableMinify),
+      if (layer.flipY != flipY) 'flipY': flipY.minify(enableMinify),
       if (!mapIsEqual(layer.meta, meta)) 'meta': meta,
       if (layer.interaction != interaction)
-        'interaction': interaction.toMapFromReference(layer.interaction),
+        'interaction': interaction.toMapFromReference(layer.interaction,
+            enableMinify: enableMinify),
       if (layer.boxConstraints != boxConstraints)
-        'boxConstraints': boxConstraints!.toMap()
+        'boxConstraints':
+            boxConstraints!.toMap(maxDecimalPlaces: maxDecimalPlaces),
+      if (layer.groupId != groupId) 'groupId': groupId,
     };
   }
 
@@ -215,8 +223,8 @@ class Layer {
         other.flipY == flipY &&
         other.interaction == interaction &&
         other.boxConstraints == boxConstraints &&
-        mapIsEqual(other.meta, meta) &&
-        other.isDeleted == isDeleted;
+        other.groupId == groupId &&
+        mapIsEqual(other.meta, meta);
   }
 
   @override
@@ -230,6 +238,55 @@ class Layer {
         interaction.hashCode ^
         boxConstraints.hashCode ^
         meta.hashCode ^
-        isDeleted.hashCode;
+        groupId.hashCode;
+  }
+
+  /// Creates a copy of this [Layer] with the given fields replaced with
+  /// new values.
+  Layer copyWith({
+    String? id,
+    String? groupId,
+    Offset? offset,
+    double? rotation,
+    double? scale,
+    bool? flipX,
+    bool? flipY,
+    LayerInteraction? interaction,
+    Map<String, dynamic>? meta,
+    BoxConstraints? boxConstraints,
+  }) {
+    return Layer(
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      offset: offset ?? this.offset,
+      rotation: rotation ?? this.rotation,
+      scale: scale ?? this.scale,
+      flipX: flipX ?? this.flipX,
+      flipY: flipY ?? this.flipY,
+      interaction: interaction ?? this.interaction,
+      meta: meta ?? this.meta,
+      boxConstraints: boxConstraints ?? this.boxConstraints,
+    );
+  }
+
+  /// Fills the given [DiagnosticPropertiesBuilder] with properties of this
+  /// layer for debugging and development tools.
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    properties
+      ..add(StringProperty('id', id))
+      ..add(StringProperty('groupId', groupId))
+      ..add(DoubleProperty('rotation', rotation))
+      ..add(DoubleProperty('scale', scale))
+      ..add(DiagnosticsProperty<bool>('flipX', flipX))
+      ..add(DiagnosticsProperty<bool>('flipY', flipY))
+      ..add(DiagnosticsProperty<Offset>('offset', offset))
+      ..add(DiagnosticsProperty<Map<String, dynamic>>('meta', meta))
+      ..add(
+          DiagnosticsProperty<BoxConstraints>('boxConstraints', boxConstraints))
+      ..add(DiagnosticsProperty<LayerInteraction>('interaction', interaction))
+      ..add(FlagProperty('isEmojiLayer', value: isEmojiLayer, ifTrue: 'true'))
+      ..add(FlagProperty('isPaintLayer', value: isPaintLayer, ifTrue: 'true'))
+      ..add(FlagProperty('isWidgetLayer', value: isWidgetLayer, ifTrue: 'true'))
+      ..add(FlagProperty('isTextLayer', value: isTextLayer, ifTrue: 'true'));
   }
 }

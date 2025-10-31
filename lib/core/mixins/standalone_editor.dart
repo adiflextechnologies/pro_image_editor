@@ -3,7 +3,6 @@
 
 import 'dart:async';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -16,8 +15,8 @@ import '/shared/factories/editor_factory.dart';
 import '/shared/factories/editor_mapper.dart';
 import '/shared/services/content_recorder/controllers/content_recorder_controller.dart';
 import '/shared/utils/decode_image.dart';
+import '/shared/utils/transparent_image_generator_utils.dart';
 import '/shared/widgets/overlays/loading_dialog/loading_dialog.dart';
-import '../enums/editor_mode.dart';
 import '../models/editor_callbacks/pro_image_editor_callbacks.dart';
 import '../models/editor_configs/pro_image_editor_configs.dart';
 import '../models/editor_image.dart';
@@ -144,7 +143,8 @@ mixin StandaloneEditorState<T extends StatefulWidget,
     Function? onCloseWithValue,
     Function(Uint8List?)? onSetFakeHero,
     required double blur,
-    required List<List<double>> colorFilters,
+    required List<List<double>> matrixFilterList,
+    required List<List<double>> matrixTuneAdjustmentsList,
     required TransformConfigs? transform,
   }) async {
     if (isGenerationActive) return;
@@ -205,7 +205,8 @@ mixin StandaloneEditorState<T extends StatefulWidget,
         await initConfigs.callbacks.onCompleteWithParameters?.call(
           CompleteParameters(
             blur: blur,
-            colorFilters: colorFilters,
+            matrixFilterList: matrixFilterList,
+            matrixTuneAdjustmentsList: matrixTuneAdjustmentsList,
             cropWidth: isTransformed ? outputSize!.width.round() : null,
             cropHeight: isTransformed ? outputSize!.height.round() : null,
             cropX: isTransformed ? outputOffset!.dx.round() : null,
@@ -308,19 +309,8 @@ mixin StandaloneEditorState<T extends StatefulWidget,
   Future<Uint8List> _createTransparentImage() async {
     if (_transparentImageBytes != null) return _transparentImageBytes!;
 
-    double width = videoController!.initialResolution.width;
-    double height = videoController!.initialResolution.height;
-
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
-    final paint = Paint()..color = const ui.Color.fromARGB(0, 0, 0, 0);
-    canvas.drawRect(Rect.fromLTWH(0.0, 0.0, width, height), paint);
-
-    final picture = recorder.endRecording();
-    final img = await picture.toImage(width.toInt(), height.toInt());
-    final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
-
-    _transparentImageBytes = pngBytes!.buffer.asUint8List();
+    _transparentImageBytes =
+        await createTransparentImage(videoController!.initialResolution);
     return _transparentImageBytes!;
   }
 }

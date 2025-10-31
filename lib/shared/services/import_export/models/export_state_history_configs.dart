@@ -1,4 +1,5 @@
 // Project imports:
+import '/core/constants/int_constants.dart';
 import '../enums/export_import_enum.dart';
 
 /// Configuration options for exporting editor contents.
@@ -18,7 +19,22 @@ class ExportEditorConfigs {
     this.exportBlur = true,
     this.exportWidgets = true,
     this.enableMinify = true,
-  });
+    this.maxDecimalPlaces = kMaxSafeDecimalPlaces,
+  }) : assert(
+          maxDecimalPlaces <= kMaxSafeDecimalPlaces + 1,
+          'maxDecimalPlaces must be less than or equal to '
+          '${kMaxSafeDecimalPlaces + 1}',
+        );
+
+  /// The maximum number of decimal places allowed for numerical values.
+  ///
+  /// This parameter defines the precision of decimal numbers. It is recommended
+  /// to use a minimum of 3 decimal places to ensure adequate precision for most
+  /// use cases.
+  ///
+  /// Smaller values can reduce the export size but may alter the
+  /// output result due to reduced precision.
+  final int maxDecimalPlaces;
 
   /// The span of the export history to include in the export.
   ///
