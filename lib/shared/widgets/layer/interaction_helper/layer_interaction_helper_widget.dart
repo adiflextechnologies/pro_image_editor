@@ -230,10 +230,13 @@ class _LayerInteractionHelperWidgetState
   }
 
   List<LayerInteractionItem> _buildDefaultInteractions() {
-    bool isLayerEditable = widget.layerData.interaction.enableEdit &&
-            widget.layerData.runtimeType == TextLayer ||
-        (widget.layerData.runtimeType == WidgetLayer &&
-            widget.callbacks.stickerEditorCallbacks?.onTapEditSticker != null);
+   bool isLayerEditable =
+      widget.layerData.interaction.enableEdit &&
+      (
+        widget.layerData is TextLayer ||           
+        widget.layerData is WidgetLayer               
+      );
+
 
     return [
       if (isLayerEditable)
