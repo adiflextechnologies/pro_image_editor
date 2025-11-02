@@ -230,36 +230,31 @@ class _LayerInteractionHelperWidgetState
   }
 
   List<LayerInteractionItem> _buildDefaultInteractions() {
-  bool isLayerEditable =
-      widget.layerData.interaction.enableEdit &&
-      (
-        widget.layerData is TextLayer ||               // ✅ Text edit
-        widget.layerData is WidgetLayer                // ✅ Image/edit for widget layer (images)
-      );
+    bool isLayerEditable = widget.layerData.interaction.enableEdit &&
+            widget.layerData.runtimeType == TextLayer ||
+        (widget.layerData.runtimeType == WidgetLayer &&
+            widget.callbacks.stickerEditorCallbacks?.onTapEditSticker != null);
 
-  return [
-    if (isLayerEditable)
+    return [
+      if (isLayerEditable)
+        (rebuildStream, layer, interactions) => ReactiveWidget(
+              stream: rebuildStream,
+              builder: (_) => _buildEditButton(interactions),
+            ),
       (rebuildStream, layer, interactions) => ReactiveWidget(
             stream: rebuildStream,
-            builder: (_) => _buildEditButton(interactions),
+            builder: (_) => _buildRemoveButton(interactions),
           ),
-
-    (rebuildStream, layer, interactions) => ReactiveWidget(
-          stream: rebuildStream,
-          builder: (_) => _buildRemoveButton(interactions),
-        ),
-
-    (rebuildStream, layer, interactions) => ReactiveWidget(
-          stream: rebuildStream,
-          builder: (_) => _buildRotateScaleIcon(interactions),
-        ),
-
-    (rebuildStream, layer, interactions) => ReactiveWidget(
-          stream: rebuildStream,
-          builder: (_) => _buildRemoveBgIcon(interactions),
-        ),
-  ];
-}
+      (rebuildStream, layer, interactions) => ReactiveWidget(
+            stream: rebuildStream,
+            builder: (_) => _buildRotateScaleIcon(interactions),
+          ),
+      (rebuildStream, layer, interactions) => ReactiveWidget(
+            stream: rebuildStream,
+            builder: (_) => _buildRemoveBgIcon(interactions),
+          ),
+    ];
+  }
 
 
   Widget _buildRotateScaleIcon(LayerItemInteractions interactions) {
