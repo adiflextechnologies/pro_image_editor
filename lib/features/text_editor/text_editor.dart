@@ -289,9 +289,9 @@ class TextEditorState extends State<TextEditor>
 
   /// Update the current text style.
   void setTextStyle(TextStyle style) {
-    setState(() {
-      selectedTextStyle = style;
-    });
+    selectedTextStyle = style;
+    _rebuildController.add(null);   // preview listeners
+    if (mounted) setState(() {});   // ensure TextField rebuilds right away
   }
 
   /// Closes the editor without applying changes.

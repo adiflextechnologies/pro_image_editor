@@ -31,17 +31,13 @@ class LayerInteractionWidgets {
   /// interaction layer.
   /// * [border]: An optional border to be displayed around the interaction
   /// layer.
-  const LayerInteractionWidgets({
-    this.overlayChildBuilder,
-    this.editButton,
-    this.removeButton,
-    this.rotateScaleButton,
-    this.children,
-    this.border,
-  });
-
-  /// This will completely replace the existing overlay when editing a layer.
-  final LayerOverlayBuilder? overlayChildBuilder;
+  const LayerInteractionWidgets(
+      {this.editButton,
+      this.removeButton,
+      this.rotateScaleButton,
+      this.children,
+      this.border,
+      this.removebgIcon});
 
   /// The button for the edit interaction, represented by
   /// [LayerInteractionTapButton].
@@ -63,6 +59,9 @@ class LayerInteractionWidgets {
   /// **Note:** May not be directly visible or functional when `children` is
   /// used.
   final LayerInteractionScaleRotateButton? rotateScaleButton;
+
+  /// [LayerInteractionTapButton].
+  final LayerInteractionTapButton? removebgIcon;
 
   /// A list of child widgets to be displayed within the interaction layer.
   ///
@@ -169,21 +168,19 @@ class LayerInteractionWidgets {
   /// * [rotateScaleButton]: Updates the button for rotate/scale actions.
   /// * [children]: Updates the list of child widgets.
   /// * [border]: Updates the border of the interaction layer.
-  LayerInteractionWidgets copyWith({
-    LayerOverlayBuilder? overlayChildBuilder,
-    LayerInteractionTapButton? editButton,
-    LayerInteractionTapButton? removeButton,
-    LayerInteractionScaleRotateButton? rotateScaleButton,
-    List<LayerInteractionItem>? children,
-    LayerInteractionBorder? border,
-  }) {
+  LayerInteractionWidgets copyWith(
+      {LayerInteractionTapButton? editButton,
+      LayerInteractionTapButton? removeButton,
+      LayerInteractionScaleRotateButton? rotateScaleButton,
+      List<LayerInteractionItem>? children,
+      LayerInteractionBorder? border,
+      LayerInteractionTapButton? removebgIcon}) {
     return LayerInteractionWidgets(
-      overlayChildBuilder: overlayChildBuilder ?? this.overlayChildBuilder,
-      editButton: editButton ?? this.editButton,
-      removeButton: removeButton ?? this.removeButton,
-      rotateScaleButton: rotateScaleButton ?? this.rotateScaleButton,
-      children: children ?? this.children,
-      border: border ?? this.border,
-    );
+        editButton: editButton ?? this.editButton,
+        removeButton: removeButton ?? this.removeButton,
+        rotateScaleButton: rotateScaleButton ?? this.rotateScaleButton,
+        children: children ?? this.children,
+        border: border ?? this.border,
+        removebgIcon: removebgIcon ?? this.removebgIcon);
   }
 }

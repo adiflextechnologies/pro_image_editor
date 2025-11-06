@@ -183,17 +183,13 @@ class _TextEditorInputState extends State<TextEditorInput> {
           hintStyle: widget.selectedTextStyle.copyWith(
             color: widget.configs.style.inputHintColor,
             fontSize: widget.textFontSize,
-            shadows: [],
+            // do NOT override height/letterSpacing/shadows/decoration here
           ),
           backgroundColor: widget.backgroundColor,
           style: widget.selectedTextStyle.copyWith(
             color: widget.textColor,
             fontSize: widget.textFontSize,
-            letterSpacing: 0,
-            decoration: TextDecoration.none,
-            shadows: [],
           ),
-
           /// If we edit an layer we focus to the textfield after the
           /// hero animation is done
           autofocus: widget.layer == null,
