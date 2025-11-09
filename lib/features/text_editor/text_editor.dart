@@ -407,7 +407,7 @@ class TextEditorState extends State<TextEditor>
                 _rebuildController.stream,
               ),
             _buildTextField(),
-            _buildColorPicker(),
+            // _buildColorPicker(), commented thid to hide default color picker
             if (textEditorConfigs.showSelectFontStyleBottomBar)
               Positioned(
                 bottom: 0,

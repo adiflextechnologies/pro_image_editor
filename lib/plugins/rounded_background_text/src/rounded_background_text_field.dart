@@ -604,6 +604,7 @@ class _RoundedBackgroundTextFieldState
                 scrollPadding: widget.scrollPadding,
                 style: (widget.style ?? const TextStyle()).copyWith(
                   fontSize: fontSize,
+                  backgroundColor: null, // to remove default rounded background
                   leadingDistribution: TextLeadingDistribution.proportional,
                 ),
                 textAlign: widget.textAlign,
