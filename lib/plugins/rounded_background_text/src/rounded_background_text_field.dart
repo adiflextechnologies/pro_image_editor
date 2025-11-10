@@ -515,14 +515,16 @@ class _RoundedBackgroundTextFieldState
     const padding = EdgeInsets.all(6.0);
 
     // Merge an explicit foreground paint if provided so the preview painter
-    // and the editable text share the same shader.
+    // and the editable text share the same shader. Avoid providing both
+    // `color` and `foreground` to TextStyle.copyWith (they're mutually
+    // exclusive and will assert). If we have a foreground paint, set
+    // `foreground` and leave `color` null; otherwise set `color`.
     final baseStyle = (widget.style ?? const TextStyle());
+    final hasForeground = widget.foregroundPaint != null || baseStyle.foreground != null;
     final style = baseStyle.copyWith(
-      // The text is rendered by the [EditableText] widget below.
-      // It has more accuracy for a bunch of text features
-      color: Colors.transparent,
       leadingDistribution: TextLeadingDistribution.proportional,
-      foreground: widget.foregroundPaint ?? baseStyle.foreground,
+      foreground: hasForeground ? (widget.foregroundPaint ?? baseStyle.foreground) : null,
+      color: hasForeground ? null : baseStyle.color,
     );
     // Debug: log when a foreground Paint (gradient) is present on the
     // incoming style so we can trace whether gradients are being passed in.
@@ -629,19 +631,20 @@ class _RoundedBackgroundTextFieldState
                 // can draw the visible text with the same foreground. This
                 // preserves cursor/selection behavior while avoiding the
                 // EditableText painting a solid color over the painted text.
+                // Build an EditableText style without providing both color and
+                // foreground at the same time. If a foreground paint exists,
+                // prefer setting `foreground` and leave `color` null so the
+                // shader paints the glyphs. Otherwise, set the plain color.
                 style: (widget.style ?? const TextStyle()).copyWith(
                   fontSize: fontSize,
                   backgroundColor: null, // to remove default rounded background
                   leadingDistribution: TextLeadingDistribution.proportional,
-                  // If we have an explicit foreground Paint, make the
-                  // EditableText color transparent so the painter drawn
-                  // gradient is visible. Otherwise, use the configured color.
+                  foreground: (widget.foregroundPaint != null || widget.style?.foreground != null)
+                      ? (widget.foregroundPaint ?? widget.style?.foreground)
+                      : null,
                   color: (widget.foregroundPaint != null || widget.style?.foreground != null)
-                      ? Colors.transparent
-                      : (widget.style?.color),
-                  // Also ensure the editable text has the foreground set
-                  // when we can so it paints the shader directly if needed.
-                  foreground: widget.foregroundPaint ?? widget.style?.foreground,
+                      ? null
+                      : widget.style?.color,
                 ),
                 textAlign: widget.textAlign,
                 maxLines: widget.maxLines,
