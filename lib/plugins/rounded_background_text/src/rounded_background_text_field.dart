@@ -516,6 +516,19 @@ class _RoundedBackgroundTextFieldState
       color: Colors.transparent,
       leadingDistribution: TextLeadingDistribution.proportional,
     );
+    // Debug: log when a foreground Paint (gradient) is present on the
+    // incoming style so we can trace whether gradients are being passed in.
+    assert(() {
+      // avoid stdout noise in release builds
+      if (widget.style?.foreground != null) {
+        // ignore: avoid_print
+        debugPrint('[RoundedBackgroundTextField] incoming style has foreground paint');
+      } else {
+        // ignore: avoid_print
+        debugPrint('[RoundedBackgroundTextField] incoming style has NO foreground paint; color=${widget.style?.color}');
+      }
+      return true;
+    }());
     return Stack(
       clipBehavior: Clip.none,
       alignment: switch (widget.textAlign) {
@@ -602,10 +615,19 @@ class _RoundedBackgroundTextFieldState
                 scrollBehavior: widget.scrollBehavior,
                 scrollController: scrollController,
                 scrollPadding: widget.scrollPadding,
+                // If the provided style contains a `foreground` paint (e.g.
+                // a gradient shader), make the EditableText color
+                // transparent so the CustomPainter below (RoundedBackgroundText)
+                // can draw the visible text with the same foreground. This
+                // preserves cursor/selection behavior while avoiding the
+                // EditableText painting a solid color over the painted text.
                 style: (widget.style ?? const TextStyle()).copyWith(
                   fontSize: fontSize,
                   backgroundColor: null, // to remove default rounded background
                   leadingDistribution: TextLeadingDistribution.proportional,
+                  color: (widget.style?.foreground != null)
+                      ? Colors.transparent
+                      : (widget.style?.color),
                 ),
                 textAlign: widget.textAlign,
                 maxLines: widget.maxLines,
