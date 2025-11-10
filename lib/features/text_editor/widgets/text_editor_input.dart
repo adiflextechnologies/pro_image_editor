@@ -104,6 +104,28 @@ class TextEditorInput extends StatelessWidget {
     return toHeroContext.widget;
   }
 
+  // Returns a TextStyle that preserves an existing foreground paint (e.g.
+  // a gradient shader). If there is no foreground paint, uses [fallbackColor]
+  // as the plain color. Always applies [fontSize].
+  TextStyle _effectiveStyleWithPossibleForeground(
+    TextStyle base,
+    Color fallbackColor,
+    double fontSize,
+  ) {
+    var style = base;
+
+    // If there's no foreground paint (shader), set a regular color so the
+    // EditableText shows a plain color. If a foreground is present we must
+    // keep it (this is how gradients are preserved).
+    if (style.foreground == null) {
+      style = style.copyWith(color: fallbackColor);
+    }
+
+    // Ensure fontSize is applied.
+    style = style.copyWith(fontSize: fontSize);
+    return style;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Align(
@@ -153,16 +175,17 @@ class TextEditorInput extends StatelessWidget {
         scrollPhysics: const NeverScrollableScrollPhysics(),
         hint: textCtrl.text.isEmpty ? i18n.inputHintText : '',
         hintStyle: selectedTextStyle.copyWith(
-        color: configs.style.inputHintColor,
-        fontSize: textFontSize,
-        // do NOT override height/letterSpacing/shadows/decoration here
+          color: configs.style.inputHintColor,
+          fontSize: textFontSize,
+          // do NOT override height/letterSpacing/shadows/decoration here
         ),
         backgroundColor: backgroundColor,
-        style: selectedTextStyle.copyWith(
-        color: textColor,
-        fontSize: textFontSize,
-        // IMPORTANT: do NOT set height / letterSpacing / decoration / shadows
-        // We want to respect what AdvancedTextEditor sets (line spacing, letter spacing, outline via shadows)
+        // Preserve `foreground` (e.g. gradient paint) if provided by the
+        // selectedTextStyle. Only set a plain color when no foreground is set.
+        style: _effectiveStyleWithPossibleForeground(
+          selectedTextStyle,
+          textColor,
+          textFontSize,
         ),
 
         /// If we edit an layer we focus to the textfield after the
