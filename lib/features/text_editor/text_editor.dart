@@ -166,12 +166,18 @@ class TextEditorState extends State<TextEditor>
       _fontScale = widget.layer!.fontScale;
       backgroundColorMode = widget.layer!.colorMode!;
       if (widget.layer!.customSecondaryColor) {
+        // Gradient mode: primaryColor and secondaryColor are gradient colors
         _primaryColor = widget.layer!.color;
         _secondaryColor = widget.layer!.background;
+        // Background color should be transparent when using gradient
+        _backgroundColor = null;
       } else {
+        // Normal mode: use color mode to determine colors
         _primaryColor = backgroundColorMode == LayerBackgroundMode.background
             ? widget.layer!.background
             : widget.layer!.color;
+        _secondaryColor = null;
+        _backgroundColor = null;
       }
       colorPosition = widget.layer!.colorPickerPosition ?? 0;
     }
