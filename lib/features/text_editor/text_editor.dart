@@ -444,6 +444,20 @@ class TextEditorState extends State<TextEditor>
 
   /// Builds the text field for text input.
   Widget _buildTextField() {
+    // If a secondary color is provided (custom secondary), render text with a horizontal gradient.
+    TextStyle effectiveSelectedTextStyle = selectedTextStyle;
+    if (_secondaryColor != null) {
+      // Use a wide rect so the gradient spans across typical editor widths.
+      final shaderRect = Rect.fromLTWH(0, 0, 1200, _textFontSize * 1.4);
+      final shader = LinearGradient(
+        colors: [primaryColor, _secondaryColor!],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      ).createShader(shaderRect);
+      final paint = Paint()..shader = shader;
+      effectiveSelectedTextStyle = selectedTextStyle.copyWith(foreground: paint);
+    }
+
     return TextEditorInput(
       callbacks: textEditorCallbacks,
       configs: textEditorConfigs,
@@ -455,7 +469,7 @@ class TextEditorState extends State<TextEditor>
       focusNode: focusNode,
       i18n: i18n.textEditor,
       layer: widget.layer,
-      selectedTextStyle: selectedTextStyle,
+      selectedTextStyle: effectiveSelectedTextStyle,
       textColor: _textColor,
       textFontSize: _textFontSize,
     );
