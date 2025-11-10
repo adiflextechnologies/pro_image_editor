@@ -399,6 +399,14 @@ class _RoundedBackgroundTextFieldState
 
   final fieldKey = GlobalKey<EditableTextState>();
 
+  // Cache the computed Paint for gradient shaders to avoid recreating
+  // shaders on every build (which can be expensive and cause heavy
+  // rebuild churn). We invalidate the cache when relevant inputs change.
+  Paint? _cachedPaint;
+  List<Color>? _cachedGradientColors;
+  double? _cachedWidth;
+  bool _lastHadForeground = false;
+
   late TextEditingController textController =
       widget.controller ?? TextEditingController();
   late ScrollController scrollController =
@@ -428,6 +436,13 @@ class _RoundedBackgroundTextFieldState
 
     if (widget.controller != oldWidget.controller) {
       textController = widget.controller ?? textController;
+    }
+
+    // Invalidate cached paint if gradient inputs changed.
+    if (widget.foregroundPaint != oldWidget.foregroundPaint ||
+        widget.gradientColors != oldWidget.gradientColors) {
+      _cachedPaint = null;
+      _cachedGradientColors = null;
     }
   }
 
@@ -573,19 +588,32 @@ class _RoundedBackgroundTextFieldState
                 // available width so the gradient maps across the glyphs. If
                 // an explicit foregroundPaint was passed, prefer that.
                 child: Builder(builder: (ctx) {
+                  // Prefer an explicit foregroundPaint passed by caller. If
+                  // none is provided, compute a shader for gradientColors and
+                  // cache it so we don't recreate shaders each build.
                   Paint? computedPaint = widget.foregroundPaint;
-                  // If caller provided gradient colors, create a shader that
-                  // spans the approximate available width. Use MediaQuery as
-                  // a reasonable approximation for the editor width.
+
+                  final mqWidth = MediaQuery.of(ctx).size.width;
                   if (computedPaint == null && widget.gradientColors != null && widget.gradientColors!.length >= 2) {
-                    final screenWidth = MediaQuery.of(ctx).size.width;
-                    final shaderRect = Rect.fromLTWH(0, 0, screenWidth - 32.0, fontSize * 1.4);
-                    computedPaint = Paint()
-                      ..shader = LinearGradient(
-                        colors: widget.gradientColors!,
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ).createShader(shaderRect);
+                    // Recompute only if inputs changed (colors or available width).
+                    if (_cachedPaint == null ||
+                        _cachedGradientColors == null ||
+                        _cachedWidth == null ||
+                        _cachedGradientColors!.length != widget.gradientColors!.length ||
+                        _cachedGradientColors!.first != widget.gradientColors!.first ||
+                        _cachedGradientColors!.last != widget.gradientColors!.last ||
+                        (_cachedWidth! - mqWidth).abs() > 0.5) {
+                      final shaderRect = Rect.fromLTWH(0, 0, mqWidth - 32.0, fontSize * 1.4);
+                      _cachedPaint = Paint()
+                        ..shader = LinearGradient(
+                          colors: widget.gradientColors!,
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(shaderRect);
+                      _cachedGradientColors = List.from(widget.gradientColors!);
+                      _cachedWidth = mqWidth;
+                    }
+                    computedPaint = _cachedPaint;
                   }
 
                   final spanStyle = style.copyWith(
@@ -593,23 +621,32 @@ class _RoundedBackgroundTextFieldState
                     color: computedPaint != null ? null : style.color,
                   );
 
+                  // Avoid excessive debug prints on every frame; only log when
+                  // the presence of a foreground paint changes.
+                  final hadForeground = spanStyle.foreground != null;
+                  if (hadForeground != _lastHadForeground) {
+                    // ignore: avoid_print
+                    debugPrint('[RoundedBackgroundTextField] incoming style has ${hadForeground ? 'foreground paint' : 'NO foreground paint; color=${spanStyle.color}'}');
+                    _lastHadForeground = hadForeground;
+                  }
+
                   return RoundedBackgroundText.rich(
                     text: textController.buildTextSpan(
                       context: ctx,
                       withComposing: !widget.readOnly,
                       style: spanStyle,
                     ),
-                  textAlign: widget.textAlign,
-                  backgroundColor: widget.backgroundColor,
-                  innerRadius: widget.innerRadius,
-                  outerRadius: widget.outerRadius,
-                  textDirection: widget.textDirection,
-                  textScaler: widget.textScaler ?? TextScaler.noScaling,
-                  locale: widget.locale,
-                  textHeightBehavior: widget.textHeightBehavior,
-                  textWidthBasis: widget.textWidthBasis,
-                  strutStyle: widget.strutStyle,
-                  enableHorizontalHitBox: false,
+                    textAlign: widget.textAlign,
+                    backgroundColor: widget.backgroundColor,
+                    innerRadius: widget.innerRadius,
+                    outerRadius: widget.outerRadius,
+                    textDirection: widget.textDirection,
+                    textScaler: widget.textScaler ?? TextScaler.noScaling,
+                    locale: widget.locale,
+                    textHeightBehavior: widget.textHeightBehavior,
+                    textWidthBasis: widget.textWidthBasis,
+                    strutStyle: widget.strutStyle,
+                    enableHorizontalHitBox: false,
                   );
                 }),
               ),
