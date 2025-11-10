@@ -476,8 +476,9 @@ class TextEditorState extends State<TextEditor>
   Widget _buildTextField() {
     // If a secondary color is provided (custom secondary), render text with a horizontal gradient.
     TextStyle effectiveSelectedTextStyle = selectedTextStyle;
-    Paint? gradientPaint;
-    if (_secondaryColor != null) {
+  Paint? gradientPaint;
+  List<Color>? gradientColors;
+  if (_secondaryColor != null) {
       // Use a wide rect so the gradient spans across typical editor widths.
       final shaderRect = Rect.fromLTWH(0, 0, 1200, _textFontSize * 1.4);
       final shader = LinearGradient(
@@ -487,6 +488,7 @@ class TextEditorState extends State<TextEditor>
       ).createShader(shaderRect);
       final paint = Paint()..shader = shader;
       gradientPaint = paint;
+      gradientColors = [primaryColor, _secondaryColor!];
       effectiveSelectedTextStyle = selectedTextStyle.copyWith(foreground: paint);
     }
     // Debug: log whether a foreground Paint was attached to the effective style
@@ -507,6 +509,7 @@ class TextEditorState extends State<TextEditor>
       selectedTextStyle: effectiveSelectedTextStyle,
       textColor: _textColor,
       foregroundPaint: gradientPaint,
+      gradientColors: gradientColors,
       textFontSize: _textFontSize,
     );
   }

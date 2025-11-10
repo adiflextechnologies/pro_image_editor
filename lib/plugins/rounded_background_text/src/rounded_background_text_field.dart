@@ -16,6 +16,7 @@ class RoundedBackgroundTextField extends StatefulWidget {
   this.style,
   this.backgroundColor,
   this.foregroundPaint,
+  this.gradientColors,
     this.textAlign = TextAlign.start,
     this.textDirection,
     this.textScaler,
@@ -104,6 +105,10 @@ class RoundedBackgroundTextField extends StatefulWidget {
 
   /// Optional explicit foreground Paint (shader) to render text with a gradient.
   final Paint? foregroundPaint;
+
+  /// Optional gradient colors (start, end). If provided the widget will build
+  /// a shader sized to the text layout so the gradient maps correctly.
+  final List<Color>? gradientColors;
 
   final int? maxLines;
 
@@ -564,12 +569,36 @@ class _RoundedBackgroundTextFieldState
                   bottom: 3.0,
                 ),
                 margin: padding,
-                child: RoundedBackgroundText.rich(
-                  text: textController.buildTextSpan(
-                    context: context,
-                    withComposing: !widget.readOnly,
-                    style: style,
-                  ),
+                // If gradientColors are provided, build a shader sized to the
+                // available width so the gradient maps across the glyphs. If
+                // an explicit foregroundPaint was passed, prefer that.
+                child: Builder(builder: (ctx) {
+                  Paint? computedPaint = widget.foregroundPaint;
+                  // If caller provided gradient colors, create a shader that
+                  // spans the approximate available width. Use MediaQuery as
+                  // a reasonable approximation for the editor width.
+                  if (computedPaint == null && widget.gradientColors != null && widget.gradientColors!.length >= 2) {
+                    final screenWidth = MediaQuery.of(ctx).size.width;
+                    final shaderRect = Rect.fromLTWH(0, 0, screenWidth - 32.0, fontSize * 1.4);
+                    computedPaint = Paint()
+                      ..shader = LinearGradient(
+                        colors: widget.gradientColors!,
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ).createShader(shaderRect);
+                  }
+
+                  final spanStyle = style.copyWith(
+                    foreground: computedPaint ?? style.foreground,
+                    color: computedPaint != null ? null : style.color,
+                  );
+
+                  return RoundedBackgroundText.rich(
+                    text: textController.buildTextSpan(
+                      context: ctx,
+                      withComposing: !widget.readOnly,
+                      style: spanStyle,
+                    ),
                   textAlign: widget.textAlign,
                   backgroundColor: widget.backgroundColor,
                   innerRadius: widget.innerRadius,
@@ -581,7 +610,8 @@ class _RoundedBackgroundTextFieldState
                   textWidthBasis: widget.textWidthBasis,
                   strutStyle: widget.strutStyle,
                   enableHorizontalHitBox: false,
-                ),
+                  );
+                }),
               ),
             ),
           )
@@ -635,17 +665,20 @@ class _RoundedBackgroundTextFieldState
                 // foreground at the same time. If a foreground paint exists,
                 // prefer setting `foreground` and leave `color` null so the
                 // shader paints the glyphs. Otherwise, set the plain color.
-                style: (widget.style ?? const TextStyle()).copyWith(
-                  fontSize: fontSize,
-                  backgroundColor: null, // to remove default rounded background
-                  leadingDistribution: TextLeadingDistribution.proportional,
-                  foreground: (widget.foregroundPaint != null || widget.style?.foreground != null)
-                      ? (widget.foregroundPaint ?? widget.style?.foreground)
-                      : null,
-                  color: (widget.foregroundPaint != null || widget.style?.foreground != null)
-                      ? null
-                      : widget.style?.color,
-                ),
+        style: (widget.style ?? const TextStyle()).copyWith(
+          fontSize: fontSize,
+          backgroundColor: null, // to remove default rounded background
+          leadingDistribution: TextLeadingDistribution.proportional,
+          // If we have explicit gradientColors but no foregroundPaint,
+          // compute a shader sized to the screen width and use it here
+          // so the EditableText also paints the same gradient.
+          foreground: (widget.foregroundPaint != null || widget.style?.foreground != null || widget.gradientColors != null)
+            ? (widget.foregroundPaint ?? widget.style?.foreground)
+            : null,
+          color: (widget.foregroundPaint != null || widget.style?.foreground != null || widget.gradientColors != null)
+            ? null
+            : widget.style?.color,
+        ),
                 textAlign: widget.textAlign,
                 maxLines: widget.maxLines,
                 keyboardType: widget.keyboardType,

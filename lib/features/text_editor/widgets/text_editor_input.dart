@@ -36,7 +36,8 @@ class TextEditorInput extends StatelessWidget {
     required this.scaleFactor,
     required this.textColor,
     required this.backgroundColor,
-    this.foregroundPaint,
+  this.foregroundPaint,
+  this.gradientColors,
     required this.layer,
     required this.textCtrl,
   });
@@ -76,6 +77,11 @@ class TextEditorInput extends StatelessWidget {
   /// Optional explicit foreground Paint (e.g. gradient shader) passed from
   /// the editor so the input widget/plugin can apply it reliably.
   final Paint? foregroundPaint;
+
+  /// Optional gradient colors (two entries: start and end). When provided
+  /// the plugin will construct a shader sized to the laid-out text so the
+  /// gradient maps correctly across the glyphs.
+  final List<Color>? gradientColors;
 
   /// The text layer being edited, if applicable.
   final TextLayer? layer;
@@ -168,7 +174,7 @@ class TextEditorInput extends StatelessWidget {
         // (gradient). This helps determine if the shader reaches the input.
         debugPrint('[TextEditorInput] selectedTextStyle.foreground != null: ${selectedTextStyle.foreground != null}');
 
-        return RoundedBackgroundTextField(
+  return RoundedBackgroundTextField(
         key: const ValueKey('rounded-background-text-editor-field'),
         controller: textCtrl,
         focusNode: focusNode,
@@ -193,6 +199,7 @@ class TextEditorInput extends StatelessWidget {
         ),
   backgroundColor: backgroundColor,
   foregroundPaint: foregroundPaint,
+  gradientColors: gradientColors,
         // Preserve `foreground` (e.g. gradient paint) if provided by the
         // selectedTextStyle. Only set a plain color when no foreground is set.
         style: _effectiveStyleWithPossibleForeground(
