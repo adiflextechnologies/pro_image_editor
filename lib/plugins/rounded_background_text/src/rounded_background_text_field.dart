@@ -12,9 +12,10 @@ import 'rounded_background_text.dart';
 class RoundedBackgroundTextField extends StatefulWidget {
   const RoundedBackgroundTextField({
     super.key,
-    this.controller,
-    this.style,
-    this.backgroundColor,
+  this.controller,
+  this.style,
+  this.backgroundColor,
+  this.foregroundPaint,
     this.textAlign = TextAlign.start,
     this.textDirection,
     this.textScaler,
@@ -100,6 +101,9 @@ class RoundedBackgroundTextField extends StatefulWidget {
 
   /// {@macro rounded_background_text.background_color}
   final Color? backgroundColor;
+
+  /// Optional explicit foreground Paint (shader) to render text with a gradient.
+  final Paint? foregroundPaint;
 
   final int? maxLines;
 
@@ -510,11 +514,15 @@ class _RoundedBackgroundTextFieldState
 
     const padding = EdgeInsets.all(6.0);
 
-    final style = (widget.style ?? const TextStyle()).copyWith(
+    // Merge an explicit foreground paint if provided so the preview painter
+    // and the editable text share the same shader.
+    final baseStyle = (widget.style ?? const TextStyle());
+    final style = baseStyle.copyWith(
       // The text is rendered by the [EditableText] widget below.
       // It has more accuracy for a bunch of text features
       color: Colors.transparent,
       leadingDistribution: TextLeadingDistribution.proportional,
+      foreground: widget.foregroundPaint ?? baseStyle.foreground,
     );
     // Debug: log when a foreground Paint (gradient) is present on the
     // incoming style so we can trace whether gradients are being passed in.
@@ -625,9 +633,15 @@ class _RoundedBackgroundTextFieldState
                   fontSize: fontSize,
                   backgroundColor: null, // to remove default rounded background
                   leadingDistribution: TextLeadingDistribution.proportional,
-                  color: (widget.style?.foreground != null)
+                  // If we have an explicit foreground Paint, make the
+                  // EditableText color transparent so the painter drawn
+                  // gradient is visible. Otherwise, use the configured color.
+                  color: (widget.foregroundPaint != null || widget.style?.foreground != null)
                       ? Colors.transparent
                       : (widget.style?.color),
+                  // Also ensure the editable text has the foreground set
+                  // when we can so it paints the shader directly if needed.
+                  foreground: widget.foregroundPaint ?? widget.style?.foreground,
                 ),
                 textAlign: widget.textAlign,
                 maxLines: widget.maxLines,

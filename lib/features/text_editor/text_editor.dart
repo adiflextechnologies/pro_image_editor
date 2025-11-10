@@ -194,7 +194,8 @@ class TextEditorState extends State<TextEditor>
   /// Gets the text color based on the selected color mode.
   Color get _textColor {
     // When using custom secondary color (gradient), always use primary for text color
-    if (_secondaryColor != null) {
+  Paint? gradientPaint;
+  if (_secondaryColor != null) {
       return primaryColor;
     }
     
@@ -475,6 +476,7 @@ class TextEditorState extends State<TextEditor>
   Widget _buildTextField() {
     // If a secondary color is provided (custom secondary), render text with a horizontal gradient.
     TextStyle effectiveSelectedTextStyle = selectedTextStyle;
+    Paint? gradientPaint;
     if (_secondaryColor != null) {
       // Use a wide rect so the gradient spans across typical editor widths.
       final shaderRect = Rect.fromLTWH(0, 0, 1200, _textFontSize * 1.4);
@@ -484,8 +486,12 @@ class TextEditorState extends State<TextEditor>
         end: Alignment.centerRight,
       ).createShader(shaderRect);
       final paint = Paint()..shader = shader;
+      gradientPaint = paint;
       effectiveSelectedTextStyle = selectedTextStyle.copyWith(foreground: paint);
     }
+    // Debug: log whether a foreground Paint was attached to the effective style
+    // so we can trace gradient propagation.
+    debugPrint('[TextEditor] effectiveSelectedTextStyle has foreground: ${effectiveSelectedTextStyle.foreground != null}');
 
     return TextEditorInput(
       callbacks: textEditorCallbacks,
@@ -500,6 +506,7 @@ class TextEditorState extends State<TextEditor>
       layer: widget.layer,
       selectedTextStyle: effectiveSelectedTextStyle,
       textColor: _textColor,
+      foregroundPaint: gradientPaint,
       textFontSize: _textFontSize,
     );
   }

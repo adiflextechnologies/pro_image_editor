@@ -36,6 +36,7 @@ class TextEditorInput extends StatelessWidget {
     required this.scaleFactor,
     required this.textColor,
     required this.backgroundColor,
+    this.foregroundPaint,
     required this.layer,
     required this.textCtrl,
   });
@@ -71,6 +72,10 @@ class TextEditorInput extends StatelessWidget {
 
   /// The background color of the text input field. Null means transparent.
   final Color? backgroundColor;
+
+  /// Optional explicit foreground Paint (e.g. gradient shader) passed from
+  /// the editor so the input widget/plugin can apply it reliably.
+  final Paint? foregroundPaint;
 
   /// The text layer being edited, if applicable.
   final TextLayer? layer;
@@ -158,7 +163,12 @@ class TextEditorInput extends StatelessWidget {
   Widget _buildInputField() {
     return Transform.scale(
       scale: scaleFactor,
-      child: RoundedBackgroundTextField(
+      child: Builder(builder: (context) {
+        // Debug log whether the passed selectedTextStyle has a foreground paint
+        // (gradient). This helps determine if the shader reaches the input.
+        debugPrint('[TextEditorInput] selectedTextStyle.foreground != null: ${selectedTextStyle.foreground != null}');
+
+        return RoundedBackgroundTextField(
         key: const ValueKey('rounded-background-text-editor-field'),
         controller: textCtrl,
         focusNode: focusNode,
@@ -181,7 +191,8 @@ class TextEditorInput extends StatelessWidget {
           fontSize: textFontSize,
           // do NOT override height/letterSpacing/shadows/decoration here
         ),
-        backgroundColor: backgroundColor,
+  backgroundColor: backgroundColor,
+  foregroundPaint: foregroundPaint,
         // Preserve `foreground` (e.g. gradient paint) if provided by the
         // selectedTextStyle. Only set a plain color when no foreground is set.
         style: _effectiveStyleWithPossibleForeground(
@@ -193,7 +204,8 @@ class TextEditorInput extends StatelessWidget {
         /// If we edit an layer we focus to the textfield after the
         /// hero animation is done
         autofocus: layer == null,
-      ),
+        );
+      }),
     );
   }
 }
