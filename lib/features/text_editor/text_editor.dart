@@ -112,6 +112,18 @@ class TextEditorState extends State<TextEditor>
     });
   }
 
+  Color? _backgroundColor;
+
+  /// Gets the actual background color for text.
+  Color? get backgroundColor => _backgroundColor;
+
+  /// Sets the background color for text.
+  set backgroundColor(Color? color) {
+    setState(() {
+      _backgroundColor = color;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -174,6 +186,11 @@ class TextEditorState extends State<TextEditor>
 
   /// Gets the text color based on the selected color mode.
   Color get _textColor {
+    // When using custom secondary color (gradient), always use primary for text color
+    if (_secondaryColor != null) {
+      return primaryColor;
+    }
+    
     switch (backgroundColorMode) {
       case LayerBackgroundMode.onlyColor:
       case LayerBackgroundMode.backgroundAndColor:
@@ -186,7 +203,12 @@ class TextEditorState extends State<TextEditor>
   }
 
   /// Gets the background color based on the selected color mode.
-  Color get _backgroundColor {
+  Color get _layerBackgroundColor {
+    // When using custom secondary color (gradient), background should be from backgroundColor field
+    if (_secondaryColor != null) {
+      return _backgroundColor ?? Colors.transparent;
+    }
+    
     switch (backgroundColorMode) {
       case LayerBackgroundMode.onlyColor:
         return Colors.transparent;
@@ -311,7 +333,7 @@ class TextEditorState extends State<TextEditor>
       Navigator.of(context).pop(
         TextLayer(
           text: textCtrl.text.trim(),
-          background: _backgroundColor,
+          background: _layerBackgroundColor,
           color: _textColor,
           align: align,
           fontScale: _fontScale,
@@ -463,7 +485,7 @@ class TextEditorState extends State<TextEditor>
       configs: textEditorConfigs,
       heroTag: widget.heroTag,
       align: align,
-      backgroundColor: _backgroundColor,
+      backgroundColor: _layerBackgroundColor,
       textCtrl: textCtrl,
       scaleFactor: widget.scaleFactor,
       focusNode: focusNode,
