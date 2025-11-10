@@ -105,8 +105,9 @@ class TextEditorState extends State<TextEditor>
   /// Gets the secondary color.
   Color get secondaryColor => _secondaryColor ?? getContrastColor(primaryColor);
 
-  /// Sets the secondary color.
-  set secondaryColor(Color color) {
+  /// Sets the secondary color. Accepts null to clear a previously set
+  /// secondary (gradient) color.
+  set secondaryColor(Color? color) {
     setState(() {
       _secondaryColor = color;
     });

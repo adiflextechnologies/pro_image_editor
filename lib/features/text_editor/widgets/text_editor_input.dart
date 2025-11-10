@@ -64,11 +64,13 @@ class TextEditorInput extends StatelessWidget {
   /// The scale factor to transform the textfield
   final double scaleFactor;
 
-  /// The color of the input text.
-  final Color textColor;
+  /// The color of the input text. Nullable: when null we allow the
+  /// input widget to render with a transparent color (painter may draw
+  /// the visible foreground or gradient).
+  final Color? textColor;
 
-  /// The background color of the text input field.
-  final Color backgroundColor;
+  /// The background color of the text input field. Null means transparent.
+  final Color? backgroundColor;
 
   /// The text layer being edited, if applicable.
   final TextLayer? layer;
@@ -109,7 +111,7 @@ class TextEditorInput extends StatelessWidget {
   // as the plain color. Always applies [fontSize].
   TextStyle _effectiveStyleWithPossibleForeground(
     TextStyle base,
-    Color fallbackColor,
+    Color? fallbackColor,
     double fontSize,
   ) {
     var style = base;
@@ -118,7 +120,7 @@ class TextEditorInput extends StatelessWidget {
     // EditableText shows a plain color. If a foreground is present we must
     // keep it (this is how gradients are preserved).
     if (style.foreground == null) {
-      style = style.copyWith(color: fallbackColor);
+      style = style.copyWith(color: fallbackColor ?? Colors.transparent);
     }
 
     // Ensure fontSize is applied.
