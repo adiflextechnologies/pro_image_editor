@@ -159,20 +159,37 @@ class TextEditorState extends State<TextEditor>
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       textEditorCallbacks?.onAfterViewInit?.call();
     });
-    // Ensure styles (especially gradients) are applied after the first frame
-    // when opening the editor from the main canvas (hero animation path).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Invalidate any cached gradient paint and trigger a rebuild so the
-      // RoundedBackgroundTextField can measure the laid-out text and create
-      // a shader sized correctly for the current editor constraints.
-      _invalidateGradientCache();
-      _rebuildController.add(null);
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
+        if (widget.layer!.customSecondaryColor) {
+          // Gradient mode: primaryColor stored in layer.color. Secondary
+          // gradient color is stored in meta['secondaryGradientColor'] for
+          // newer saved layers; for backward compatibility fall back to
+          // layer.background if meta entry is absent.
+          _primaryColor = widget.layer!.color;
+          final metaSec = widget.layer!.meta != null
+              ? widget.layer!.meta!['secondaryGradientColor']
+              : null;
+          if (metaSec is int) {
+            _secondaryColor = Color(metaSec);
+          } else if (metaSec is String) {
+            // in case some exports stored hex as string
+            try {
+              _secondaryColor = Color(int.parse(metaSec));
+            } catch (_) {
+              _secondaryColor = widget.layer!.background;
+            }
+          } else {
+            _secondaryColor = widget.layer!.background;
+          }
+          // Restore actual rounded-pill background color (may be transparent)
+          _backgroundColor = widget.layer!.background;
+        } else {
+          // Normal mode: use color mode to determine colors
+          _primaryColor = backgroundColorMode == LayerBackgroundMode.background
+              ? widget.layer!.background
+              : widget.layer!.color;
+          _secondaryColor = null;
+          _backgroundColor = widget.layer!.background;
+        }
     _rebuildController.close();
     textCtrl.dispose();
     focusNode.dispose();
@@ -364,14 +381,30 @@ class TextEditorState extends State<TextEditor>
   /// editor.
   void done() {
     if (textCtrl.text.trim().isNotEmpty) {
+      // Build meta map preserving any existing meta and storing the
+      // secondary gradient color (if present) under a distinct key so the
+      // layer.background field can continue to represent the rounded-pill
+      // background color.
+      Map<String, dynamic>? newMeta;
+      if (_secondaryColor != null) {
+        final existing = widget.layer?.meta != null
+            ? Map<String, dynamic>.from(widget.layer!.meta!)
+            : <String, dynamic>{};
+        existing['secondaryGradientColor'] = _secondaryColor!.toHex();
+        newMeta = existing;
+      } else {
+        newMeta = widget.layer?.meta != null
+            ? Map<String, dynamic>.from(widget.layer!.meta!)
+            : null;
+      }
+
       Navigator.of(context).pop(
         TextLayer(
           text: textCtrl.text.trim(),
-          // When a custom secondary color (gradient) is used, persist
-          // the gradient pair into the layer as: color=primary, background=secondary
-          // so we can rehydrate the gradient on reopen. Otherwise persist
-          // the usual color/background mapping.
-          background: _secondaryColor != null ? _secondaryColor! : _layerBackgroundColor,
+          // Always store the actual rounded-pill background color in
+          // `background`. When a gradient is used we store the secondary
+          // gradient color separately under `meta['secondaryGradientColor']`.
+          background: _backgroundColor ?? Colors.transparent,
           color: _textColor,
           align: align,
           fontScale: _fontScale,
@@ -379,6 +412,7 @@ class TextEditorState extends State<TextEditor>
           colorPickerPosition: colorPosition,
           textStyle: selectedTextStyle,
           customSecondaryColor: _secondaryColor != null,
+          meta: newMeta,
           // Preserve the width constraint used by the editor so the saved
           // layer wraps text the same way when rendered in the main canvas.
           // Subtract paddings used in the input layout (approx 32.0) to get

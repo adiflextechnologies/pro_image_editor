@@ -46,7 +46,22 @@ class LayerWidgetTextItem extends StatelessWidget {
     TextStyle style;
     if (layer.customSecondaryColor) {
       final primary = layer.color;
-      final secondary = layer.background;
+      // Secondary gradient color was stored in meta['secondaryGradientColor']
+      // for layers saved after the fix; fall back to layer.background for
+      // backward compatibility.
+      Color secondary;
+      final metaSec = layer.meta != null ? layer.meta!['secondaryGradientColor'] : null;
+      if (metaSec is int) {
+        secondary = Color(metaSec);
+      } else if (metaSec is String) {
+        try {
+          secondary = Color(int.parse(metaSec));
+        } catch (_) {
+          secondary = layer.background;
+        }
+      } else {
+        secondary = layer.background;
+      }
 
       // Heuristic width: base on glyph count and font size, with a sensible
       // minimum so very short strings still show a gradient.
@@ -77,14 +92,11 @@ class LayerWidgetTextItem extends StatelessWidget {
           onHitChanged(hasHit);
         },
         layer.text.toString(),
-  // If this layer uses a custom secondary color for a gradient,
-  // the `background` field stores the secondary gradient color —
-  // we must NOT draw that as the rounded pill background or the
-  // text will appear on a solid block. Use transparent background
-  // when a gradient is present so only the glyphs receive the
-  // gradient (via TextStyle.foreground) and the rounded pill is
-  // not filled.
-  backgroundColor: layer.customSecondaryColor ? Colors.transparent : layer.background,
+  // Use the stored background color for the rounded pill. After the
+  // fix we store the secondary gradient color in `meta['secondaryGradientColor']`
+  // and preserve `background` for the actual pill color, so it's safe to
+  // render here regardless of gradient usage.
+  backgroundColor: layer.background,
     textAlign: layer.align,
     // Merge saved textStyle with the computed style. Important: if
     // `style` contains a `foreground` Paint (gradient), preserve it
