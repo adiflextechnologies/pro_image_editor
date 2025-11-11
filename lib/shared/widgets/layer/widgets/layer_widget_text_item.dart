@@ -77,7 +77,14 @@ class LayerWidgetTextItem extends StatelessWidget {
           onHitChanged(hasHit);
         },
         layer.text.toString(),
-        backgroundColor: layer.background,
+  // If this layer uses a custom secondary color for a gradient,
+  // the `background` field stores the secondary gradient color —
+  // we must NOT draw that as the rounded pill background or the
+  // text will appear on a solid block. Use transparent background
+  // when a gradient is present so only the glyphs receive the
+  // gradient (via TextStyle.foreground) and the rounded pill is
+  // not filled.
+  backgroundColor: layer.customSecondaryColor ? Colors.transparent : layer.background,
         textAlign: layer.align,
         style: layer.textStyle?.copyWith(
               fontSize: style.fontSize,
