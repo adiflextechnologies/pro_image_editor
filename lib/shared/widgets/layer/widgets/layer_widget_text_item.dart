@@ -85,14 +85,17 @@ class LayerWidgetTextItem extends StatelessWidget {
   // gradient (via TextStyle.foreground) and the rounded pill is
   // not filled.
   backgroundColor: layer.customSecondaryColor ? Colors.transparent : layer.background,
-        textAlign: layer.align,
-        style: layer.textStyle?.copyWith(
-              fontSize: style.fontSize,
-              fontWeight: style.fontWeight,
-              color: style.color,
-              fontFamily: style.fontFamily,
-            ) ??
-            style,
+    textAlign: layer.align,
+    // Merge saved textStyle with the computed style. Important: if
+    // `style` contains a `foreground` Paint (gradient), preserve it
+    // when copying/merging so gradients persist in the composed view.
+    style: (layer.textStyle ?? const TextStyle()).copyWith(
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      color: style.color,
+      fontFamily: style.fontFamily,
+              foreground: style.foreground,
+    ),
       ),
     );
   }
