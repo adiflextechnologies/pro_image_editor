@@ -97,6 +97,9 @@ class TextEditorState extends State<TextEditor>
     setState(() {
       _primaryColor = color;
       textEditorCallbacks?.handleColorChanged(color.toHex());
+      // Invalidate any cached gradient paint when the primary color
+      // changes so the shader can be recomputed with the new color.
+      _invalidateGradientCache();
     });
   }
 
@@ -110,6 +113,7 @@ class TextEditorState extends State<TextEditor>
   set secondaryColor(Color? color) {
     setState(() {
       _secondaryColor = color;
+      _invalidateGradientCache();
     });
   }
 
@@ -123,6 +127,19 @@ class TextEditorState extends State<TextEditor>
     setState(() {
       _backgroundColor = color;
     });
+  }
+
+  // Cached gradient paint to avoid recreating shader Paint objects on
+  // every build. We only recreate when primary or secondary colors or
+  // the available width changes.
+  Paint? _cachedGradientPaint;
+  List<Color>? _cachedGradientColors;
+  double? _cachedShaderWidth;
+
+  void _invalidateGradientCache() {
+    _cachedGradientPaint = null;
+    _cachedGradientColors = null;
+    _cachedShaderWidth = null;
   }
 
   @override
@@ -194,7 +211,6 @@ class TextEditorState extends State<TextEditor>
   /// Gets the text color based on the selected color mode.
   Color get _textColor {
     // When using custom secondary color (gradient), always use primary for text color
-  Paint? gradientPaint;
   if (_secondaryColor != null) {
       return primaryColor;
     }
@@ -479,18 +495,36 @@ class TextEditorState extends State<TextEditor>
   Paint? gradientPaint;
   List<Color>? gradientColors;
   if (_secondaryColor != null) {
-      // Use a wide rect so the gradient spans across typical editor widths.
-      final shaderRect = Rect.fromLTWH(0, 0, 1200, _textFontSize * 1.4);
+    // Determine available width for the shader. Use editorBodySize if
+    // available, otherwise fall back to a wide default.
+    final availWidth = (editorBodySize.isFinite && editorBodySize.width > 0)
+        ? editorBodySize.width
+        : 1200.0;
+
+    // Recompute cached paint only when inputs changed (colors or width).
+    final newColors = [primaryColor, _secondaryColor!];
+    if (_cachedGradientPaint == null ||
+        _cachedGradientColors == null ||
+        _cachedShaderWidth == null ||
+        _cachedGradientColors!.length != newColors.length ||
+        _cachedGradientColors!.first != newColors.first ||
+        _cachedGradientColors!.last != newColors.last ||
+        (_cachedShaderWidth! - availWidth).abs() > 0.5) {
+      final shaderRect = Rect.fromLTWH(0, 0, availWidth, _textFontSize * 1.4);
       final shader = LinearGradient(
-        colors: [primaryColor, _secondaryColor!],
+        colors: newColors,
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
       ).createShader(shaderRect);
-      final paint = Paint()..shader = shader;
-      gradientPaint = paint;
-      gradientColors = [primaryColor, _secondaryColor!];
-      effectiveSelectedTextStyle = selectedTextStyle.copyWith(foreground: paint);
+      _cachedGradientPaint = Paint()..shader = shader;
+      _cachedGradientColors = List.from(newColors);
+      _cachedShaderWidth = availWidth;
     }
+
+    gradientPaint = _cachedGradientPaint;
+    gradientColors = _cachedGradientColors;
+    effectiveSelectedTextStyle = selectedTextStyle.copyWith(foreground: gradientPaint);
+  }
     // Debug: log whether a foreground Paint was attached to the effective style
     // so we can trace gradient propagation.
     debugPrint('[TextEditor] effectiveSelectedTextStyle has foreground: ${effectiveSelectedTextStyle.foreground != null}');
