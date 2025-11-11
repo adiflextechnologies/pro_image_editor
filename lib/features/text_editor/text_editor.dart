@@ -159,37 +159,16 @@ class TextEditorState extends State<TextEditor>
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       textEditorCallbacks?.onAfterViewInit?.call();
     });
-        if (widget.layer!.customSecondaryColor) {
-          // Gradient mode: primaryColor stored in layer.color. Secondary
-          // gradient color is stored in meta['secondaryGradientColor'] for
-          // newer saved layers; for backward compatibility fall back to
-          // layer.background if meta entry is absent.
-          _primaryColor = widget.layer!.color;
-          final metaSec = widget.layer!.meta != null
-              ? widget.layer!.meta!['secondaryGradientColor']
-              : null;
-          if (metaSec is int) {
-            _secondaryColor = Color(metaSec);
-          } else if (metaSec is String) {
-            // in case some exports stored hex as string
-            try {
-              _secondaryColor = Color(int.parse(metaSec));
-            } catch (_) {
-              _secondaryColor = widget.layer!.background;
-            }
-          } else {
-            _secondaryColor = widget.layer!.background;
-          }
-          // Restore actual rounded-pill background color (may be transparent)
-          _backgroundColor = widget.layer!.background;
-        } else {
-          // Normal mode: use color mode to determine colors
-          _primaryColor = backgroundColorMode == LayerBackgroundMode.background
-              ? widget.layer!.background
-              : widget.layer!.color;
-          _secondaryColor = null;
-          _backgroundColor = widget.layer!.background;
-        }
+    // Ensure any layer-derived values are initialized. _initializeFromLayer
+    // already handles reading values from widget.layer when it is present.
+    // Guard any additional widget.layer access behind a null-check to avoid
+    // crashing when the editor is created without an initial layer.
+    // (No disposal should happen here; disposal is handled in dispose()).
+  }
+
+  @override
+  void dispose() {
+    // Close and dispose controllers created by this state.
     _rebuildController.close();
     textCtrl.dispose();
     focusNode.dispose();

@@ -546,19 +546,9 @@ class _RoundedBackgroundTextFieldState
       foreground: hasForeground ? (widget.foregroundPaint ?? baseStyle.foreground) : null,
       color: hasForeground ? null : baseStyle.color,
     );
-    // Debug: log when a foreground Paint (gradient) is present on the
-    // incoming style so we can trace whether gradients are being passed in.
-    assert(() {
-      // avoid stdout noise in release builds
-      if (widget.style?.foreground != null) {
-        // ignore: avoid_print
-        debugPrint('[RoundedBackgroundTextField] incoming style has foreground paint');
-      } else {
-        // ignore: avoid_print
-        debugPrint('[RoundedBackgroundTextField] incoming style has NO foreground paint; color=${widget.style?.color}');
-      }
-      return true;
-    }());
+    // Note: further down we log a single debug message only when the
+    // presence of a foreground paint actually changes; avoid printing here
+    // every frame to reduce noise.
     return Stack(
       clipBehavior: Clip.none,
       alignment: switch (widget.textAlign) {
