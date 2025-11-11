@@ -1170,6 +1170,7 @@ class ProImageEditorState extends State<ProImageEditor>
         ..flipX = layerData.flipX
         ..flipY = layerData.flipY
         ..offset = layerData.offset
+        ..boxConstraints = layer.boxConstraints
         ..scale = layerData.scale
         ..customSecondaryColor = layer.customSecondaryColor
         ..rotation = layerData.rotation;

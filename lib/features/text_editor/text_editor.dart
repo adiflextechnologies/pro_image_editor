@@ -369,6 +369,15 @@ class TextEditorState extends State<TextEditor>
           colorPickerPosition: colorPosition,
           textStyle: selectedTextStyle,
           customSecondaryColor: _secondaryColor != null,
+          // Preserve the width constraint used by the editor so the saved
+          // layer wraps text the same way when rendered in the main canvas.
+          // Subtract paddings used in the input layout (approx 32.0) to get
+          // the effective text area width.
+          boxConstraints: BoxConstraints(
+            maxWidth: (editorBodySize.isFinite && editorBodySize.width > 0)
+                ? (editorBodySize.width - 32.0).clamp(0.0, double.infinity)
+                : 1200.0,
+          ),
         ),
       );
     } else {
@@ -476,6 +485,9 @@ class TextEditorState extends State<TextEditor>
     });
   }
 
+  // The color picker builder may be unused depending on configuration; silence
+  // analyzer warnings about an unused private function.
+  // ignore: unused_element
   Widget _buildColorPicker() {
     return TextEditorColorPicker(
         state: this,
