@@ -595,15 +595,46 @@ class _RoundedBackgroundTextFieldState
 
                   final mqWidth = MediaQuery.of(ctx).size.width;
                   if (computedPaint == null && widget.gradientColors != null && widget.gradientColors!.length >= 2) {
-                    // Recompute only if inputs changed (colors or available width).
+                    // Measure the laid-out text width and build the shader to
+                    // span the text bounds. This ensures short strings receive
+                    // a full gradient across their glyphs instead of sampling
+                    // a tiny portion of a screen-wide shader.
+                    final maxAvailable = (mqWidth - 32.0).clamp(0.0, double.infinity);
+
+                    // Build a measurement span that does NOT include any
+                    // foreground paint so we measure glyph extents only.
+                    final measureStyle = style.copyWith(foreground: null);
+                    final InlineSpan measureSpan = textController.buildTextSpan(
+                      context: ctx,
+                      withComposing: !widget.readOnly,
+                      style: measureStyle,
+                    );
+
+                    final TextPainter measurePainter = TextPainter(
+                      text: measureSpan,
+                      textAlign: widget.textAlign,
+                      textDirection: widget.textDirection ?? Directionality.maybeOf(ctx) ?? TextDirection.ltr,
+                      textWidthBasis: widget.textWidthBasis,
+                      textScaler: widget.textScaler ?? TextScaler.noScaling,
+                      strutStyle: widget.strutStyle,
+                      locale: widget.locale,
+                      textHeightBehavior: widget.textHeightBehavior,
+                      maxLines: widget.maxLines,
+                    )..layout(maxWidth: maxAvailable);
+
+                    // Use the measured width as the shader width; add a small
+                    // padding so gradients aren't clipped at glyph edges.
+                    final measuredWidth = (measurePainter.width + 16.0).clamp(1.0, maxAvailable);
+
+                    // Recompute only if inputs changed (colors or measured width).
                     if (_cachedPaint == null ||
                         _cachedGradientColors == null ||
                         _cachedWidth == null ||
                         _cachedGradientColors!.length != widget.gradientColors!.length ||
                         _cachedGradientColors!.first != widget.gradientColors!.first ||
                         _cachedGradientColors!.last != widget.gradientColors!.last ||
-                        (_cachedWidth! - mqWidth).abs() > 0.5) {
-                      final shaderRect = Rect.fromLTWH(0, 0, mqWidth - 32.0, fontSize * 1.4);
+                        (_cachedWidth! - measuredWidth).abs() > 0.5) {
+                      final shaderRect = Rect.fromLTWH(0, 0, measuredWidth, fontSize * 1.4);
                       _cachedPaint = Paint()
                         ..shader = LinearGradient(
                           colors: widget.gradientColors!,
@@ -611,7 +642,7 @@ class _RoundedBackgroundTextFieldState
                           end: Alignment.centerRight,
                         ).createShader(shaderRect);
                       _cachedGradientColors = List.from(widget.gradientColors!);
-                      _cachedWidth = mqWidth;
+                      _cachedWidth = measuredWidth;
                     }
                     computedPaint = _cachedPaint;
                   }

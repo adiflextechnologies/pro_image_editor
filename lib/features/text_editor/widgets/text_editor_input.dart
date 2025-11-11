@@ -134,8 +134,9 @@ class TextEditorInput extends StatelessWidget {
       style = style.copyWith(color: fallbackColor ?? Colors.transparent);
     }
 
-    // Ensure fontSize is applied.
-    style = style.copyWith(fontSize: fontSize);
+    // Ensure fontSize is applied and clear any background so the
+    // RoundedBackgroundText painter controls the background rendering.
+    style = style.copyWith(fontSize: fontSize, backgroundColor: null);
     return style;
   }
 
