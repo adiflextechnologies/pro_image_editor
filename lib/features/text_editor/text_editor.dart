@@ -159,6 +159,16 @@ class TextEditorState extends State<TextEditor>
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       textEditorCallbacks?.onAfterViewInit?.call();
     });
+    // Ensure styles (especially gradients) are applied after the first frame
+    // when opening the editor from the main canvas (hero animation path).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Invalidate any cached gradient paint and trigger a rebuild so the
+      // RoundedBackgroundTextField can measure the laid-out text and create
+      // a shader sized correctly for the current editor constraints.
+      _invalidateGradientCache();
+      _rebuildController.add(null);
+      if (mounted) setState(() {});
+    });
   }
 
   @override
