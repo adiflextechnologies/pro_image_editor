@@ -34,11 +34,35 @@ class LayerWidgetTextItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var fontSize = textEditorConfigs.initFontSize * layer.scale;
-    var style = TextStyle(
+    var baseStyle = TextStyle(
       fontSize: fontSize * layer.fontScale,
-      color: layer.color,
       overflow: TextOverflow.ellipsis,
     );
+
+    // If the layer stored a custom secondary color, it represents a
+    // gradient (primary: layer.color, secondary: layer.background). Build
+    // a Paint shader sized heuristically to the text so short strings get
+    // a visible gradient span.
+    TextStyle style;
+    if (layer.customSecondaryColor) {
+      final primary = layer.color;
+      final secondary = layer.background;
+
+      // Heuristic width: base on glyph count and font size, with a sensible
+      // minimum so very short strings still show a gradient.
+      final estimatedWidth = (baseStyle.fontSize! * layer.text.length * 0.6).clamp(120.0, 2000.0);
+      final shaderRect = Rect.fromLTWH(0, 0, estimatedWidth, (baseStyle.fontSize ?? 16) * 1.4);
+      final paint = Paint()
+        ..shader = LinearGradient(
+          colors: [primary, secondary],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ).createShader(shaderRect);
+
+      style = baseStyle.copyWith(foreground: paint, color: null);
+    } else {
+      style = baseStyle.copyWith(color: layer.color);
+    }
 
     return HeroMode(
       enabled: false,
