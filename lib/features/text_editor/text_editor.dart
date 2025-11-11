@@ -357,7 +357,11 @@ class TextEditorState extends State<TextEditor>
       Navigator.of(context).pop(
         TextLayer(
           text: textCtrl.text.trim(),
-          background: _layerBackgroundColor,
+          // When a custom secondary color (gradient) is used, persist
+          // the gradient pair into the layer as: color=primary, background=secondary
+          // so we can rehydrate the gradient on reopen. Otherwise persist
+          // the usual color/background mapping.
+          background: _secondaryColor != null ? _secondaryColor! : _layerBackgroundColor,
           color: _textColor,
           align: align,
           fontScale: _fontScale,
