@@ -723,28 +723,42 @@ class PaintEditorState extends State<PaintEditor>
 
   /// Builds the main body of the paint editor.
   /// Returns a [Widget] representing the editor's body.
-  Widget _buildBody() {
-    return LayoutBuilder(builder: (context, constraints) {
-      editorBodySize = constraints.biggest;
-      return Theme(
-        data: theme,
-        child: Material(
-          color:
-              initConfigs.convertToUint8List && initConfigs.convertToUint8List
-                  ? paintEditorConfigs.style.background
-                  : Colors.transparent,
-          textStyle: platformTextStyle(context, designMode),
-          child: Stack(
-            alignment: Alignment.center,
-            fit: StackFit.expand,
-            children: _fakeHeroBytes != null
-                ? _buildFakeHero()
-                : _buildInteractiveContent(),
+Widget _buildBody() {
+  return LayoutBuilder(builder: (context, constraints) {
+
+   final size = getValidSizeOrDefault(
+    mainImageSize,
+    constraints.biggest,
+);
+
+editorBodySize = size;
+
+    return Center(
+      child: SizedBox(
+        width: editorBodySize.width,
+        height: editorBodySize.height,
+        child: Theme(
+          data: theme,
+          child: Material(
+            color: initConfigs.convertToUint8List &&
+                    initConfigs.convertToUint8List
+                ? paintEditorConfigs.style.background
+                : Colors.transparent,
+            textStyle: platformTextStyle(context, designMode),
+            child: Stack(
+              alignment: Alignment.center,
+              fit: StackFit.expand,
+              children: _fakeHeroBytes != null
+                  ? _buildFakeHero()
+                  : _buildInteractiveContent(),
+            ),
           ),
         ),
-      );
-    });
-  }
+      ),
+    );
+  });
+}
+
 
   List<Widget> _buildFakeHero() {
     return [
