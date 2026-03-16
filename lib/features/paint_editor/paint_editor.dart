@@ -726,9 +726,14 @@ class PaintEditorState extends State<PaintEditor>
 Widget _buildBody() {
   return LayoutBuilder(builder: (context, constraints) {
 
+   // For video editing, use the main editor's body size so that paint
+   // coordinates align with the ContentRecorder capture area.  Using
+   // mainImageSize can produce a canvas that is taller/wider than the
+   // main editor body (because toolbar heights differ), which shifts
+   // paint positions when the overlay is composited onto the video.
    final size = getValidSizeOrDefault(
-    mainImageSize,
-    constraints.biggest,
+    isVideoEditor ? mainBodySize : mainImageSize,
+    getValidSizeOrDefault(mainImageSize, constraints.biggest),
 );
 
 editorBodySize = size;
