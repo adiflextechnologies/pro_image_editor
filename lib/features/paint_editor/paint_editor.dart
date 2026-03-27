@@ -723,28 +723,47 @@ class PaintEditorState extends State<PaintEditor>
 
   /// Builds the main body of the paint editor.
   /// Returns a [Widget] representing the editor's body.
-  Widget _buildBody() {
-    return LayoutBuilder(builder: (context, constraints) {
-      editorBodySize = constraints.biggest;
-      return Theme(
-        data: theme,
-        child: Material(
-          color:
-              initConfigs.convertToUint8List && initConfigs.convertToUint8List
-                  ? paintEditorConfigs.style.background
-                  : Colors.transparent,
-          textStyle: platformTextStyle(context, designMode),
-          child: Stack(
-            alignment: Alignment.center,
-            fit: StackFit.expand,
-            children: _fakeHeroBytes != null
-                ? _buildFakeHero()
-                : _buildInteractiveContent(),
+Widget _buildBody() {
+  return LayoutBuilder(builder: (context, constraints) {
+
+   // For video editing, use the main editor's body size so that paint
+   // coordinates align with the ContentRecorder capture area.  Using
+   // mainImageSize can produce a canvas that is taller/wider than the
+   // main editor body (because toolbar heights differ), which shifts
+   // paint positions when the overlay is composited onto the video.
+   final size = getValidSizeOrDefault(
+    isVideoEditor ? mainBodySize : mainImageSize,
+    getValidSizeOrDefault(mainImageSize, constraints.biggest),
+);
+
+editorBodySize = size;
+
+    return Center(
+      child: SizedBox(
+        width: editorBodySize.width,
+        height: editorBodySize.height,
+        child: Theme(
+          data: theme,
+          child: Material(
+            color: initConfigs.convertToUint8List &&
+                    initConfigs.convertToUint8List
+                ? paintEditorConfigs.style.background
+                : Colors.transparent,
+            textStyle: platformTextStyle(context, designMode),
+            child: Stack(
+              alignment: Alignment.center,
+              fit: StackFit.expand,
+              children: _fakeHeroBytes != null
+                  ? _buildFakeHero()
+                  : _buildInteractiveContent(),
+            ),
           ),
         ),
-      );
-    });
-  }
+      ),
+    );
+  });
+}
+
 
   List<Widget> _buildFakeHero() {
     return [
